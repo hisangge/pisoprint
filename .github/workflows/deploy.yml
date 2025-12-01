@@ -1,0 +1,82 @@
+name: Deploy to Raspberry Pi
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout repository
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Setup PHP 8.3
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.3
+          tools: composer
+          coverage: none
+          extensions: mbstring, intl, pdo_mysql, openssl
+
+      # 3. Composer install (production optimized)
+      - name: Install Composer Dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      # 4. Setup Node 22
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # 5. Install JS dependencies
+      - name: Install Node Dependencies
+        run: npm ci
+
+      # 6. Build Vite + Wayfinder
+      - name: Build Assets
+        run: npm run build
+
+      # 7. Create clean deploy folder
+      - name: Prepare Deployment Package
+        run: |
+          rm -rf deploy
+            mkdir deploy
+            rsync -av \
+            --exclude="node_modules" \
+            --exclude=".git" \
+            --exclude=".github" \
+            --exclude="tests" \
+            --exclude="deploy" \
+            ./ ./deploy
+
+      # 8. Upload to Raspberry Pi via SCP
+      - name: Upload to Raspberry Pi
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PI_HOST }}
+          username: ${{ secrets.PI_USER }}
+          key: ${{ secrets.PI_SSH_KEY }}
+          source: "deploy/*"
+          target: "/var/www/piso-print"
+
+      # 9. Run Laravel optimize commands on Pi
+      - name: Run Remote Commands on Raspberry Pi
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PI_HOST }}
+          username: ${{ secrets.PI_USER }}
+          key: ${{ secrets.PI_SSH_KEY }}
+          script: |
+            cd /var/www/your-app
+            php artisan storage:link || true
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            php artisan optimize
+            sudo systemctl restart php8.3-fpm
+            sudo systemctl restart nginx

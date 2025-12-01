@@ -1,0 +1,505 @@
+/**
+ * Kiosk Mode Optimizations for 7-inch LAFVIN Touchscreen
+ * Display Resolution: 800×480 pixels
+ * Browser: Chromium 130+ in Kiosk Mode
+ * Cursor: Hidden via unclutter
+ * 
+ * IMPORTANT: These styles only apply to pages under /kiosk routes
+ * Admin and Auth pages use responsive desktop layouts
+ */
+
+/* ========================================
+   Global Kiosk Optimizations (Scoped to Kiosk Pages)
+   ======================================== */
+
+body[data-page^='kiosk'] * {
+    /* Disable text selection (except inputs) */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+
+    /* Disable tap highlight on touch */
+    -webkit-tap-highlight-color: transparent;
+
+    /* Smooth touch scrolling */
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Allow text selection in inputs and textareas */
+body[data-page^='kiosk'] input,
+body[data-page^='kiosk'] textarea,
+body[data-page^='kiosk'] [contenteditable='true'] {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+}
+
+/* ========================================
+   Body & HTML Optimization (Kiosk Only)
+   ======================================== */
+
+body[data-page^='kiosk'] {
+    /* Fixed width for 7-inch display */
+    width: 800px !important;
+    height: 480px !important;
+    overflow: hidden;
+
+    /* Prevent page zoom */
+    touch-action: manipulation;
+
+    /* Optimize font rendering for small screen */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+
+    /* Hide cursor (redundant with unclutter, but ensures consistency) */
+    cursor: none;
+}
+
+/* ========================================
+   Touch-Friendly Interactions (Kiosk Only)
+   ======================================== */
+
+/* Minimum touch target size: 44×44px (Apple HIG & Material Design) */
+body[data-page^='kiosk'] button,
+body[data-page^='kiosk'] a,
+body[data-page^='kiosk'] input[type='button'],
+body[data-page^='kiosk'] input[type='submit'],
+body[data-page^='kiosk'] input[type='reset'],
+body[data-page^='kiosk'] .button,
+body[data-page^='kiosk'] [role='button'] {
+    min-width: 44px;
+    min-height: 44px;
+    touch-action: manipulation;
+}
+
+/* Active state feedback for touch */
+body[data-page^='kiosk'] button:active,
+body[data-page^='kiosk'] a:active,
+body[data-page^='kiosk'] [role='button']:active {
+    opacity: 0.7;
+    transform: scale(0.98);
+    transition: all 0.1s ease;
+}
+
+/* ========================================
+   Scrollbar Styling (Touch-Friendly)
+   ======================================== */
+
+/* Custom scrollbar for better visibility */
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 6px;
+    border: 2px solid hsl(var(--muted));
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* ========================================
+   Prevent Overscroll/Bounce (Kiosk Only)
+   ======================================== */
+
+body[data-page^='kiosk'] {
+    overscroll-behavior: none;
+    position: fixed;
+}
+
+/* ========================================
+   Fullscreen Container (Kiosk Only)
+   ======================================== */
+
+body[data-page^='kiosk'] #app {
+    width: 800px;
+    height: 480px;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    /* Snap scrolling for better UX */
+    scroll-behavior: smooth;
+}
+
+/* ========================================
+   Typography Adjustments for Small Screen (Kiosk Only)
+   ======================================== */
+
+/* Base font sizes optimized for 800×480 */
+body[data-page^='kiosk'] {
+    font-size: 14px; /* Base size for rem calculations */
+}
+
+/* Headings scale */
+body[data-page^='kiosk'] h1 {
+    font-size: 1.5rem;
+} /* 21px */
+body[data-page^='kiosk'] h2 {
+    font-size: 1.25rem;
+} /* 17.5px */
+body[data-page^='kiosk'] h3 {
+    font-size: 1.125rem;
+} /* 15.75px */
+body[data-page^='kiosk'] h4,
+body[data-page^='kiosk'] h5,
+body[data-page^='kiosk'] h6 {
+    font-size: 1rem;
+} /* 14px */
+
+/* Body text */
+body[data-page^='kiosk'] p,
+body[data-page^='kiosk'] span,
+body[data-page^='kiosk'] div {
+    font-size: 0.875rem; /* 12.25px */
+    line-height: 1.4;
+}
+
+/* Small text */
+body[data-page^='kiosk'] .text-xs,
+body[data-page^='kiosk'] small {
+    font-size: 0.75rem; /* 10.5px */
+}
+
+/* ========================================
+   Layout Constraints (Kiosk Only)
+   ======================================== */
+
+/* Container max-width */
+body[data-page^='kiosk'] .container {
+    max-width: 800px !important;
+    margin: 0 auto;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+/* Prevent horizontal overflow */
+body[data-page^='kiosk'] * {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+body[data-page^='kiosk'] img,
+body[data-page^='kiosk'] video,
+body[data-page^='kiosk'] iframe {
+    max-width: 100%;
+    height: auto;
+}
+
+/* ========================================
+   Card & Modal Optimizations
+   ======================================== */
+
+/* Compact card spacing */
+.card {
+    padding: 12px;
+}
+
+/* Full-screen modals/dialogs */
+[role='dialog'],
+.modal,
+.dialog {
+    max-width: 760px !important;
+    max-height: 440px !important;
+}
+
+/* ========================================
+   Input Field Optimization (Kiosk Only)
+   ======================================== */
+
+body[data-page^='kiosk'] input,
+body[data-page^='kiosk'] textarea,
+body[data-page^='kiosk'] select {
+    /* Larger touch targets */
+    min-height: 44px;
+    font-size: 14px;
+    padding: 8px 12px;
+
+    /* Disable zoom on focus (iOS) */
+    font-size: 16px !important;
+}
+
+/* File upload buttons */
+body[data-page^='kiosk'] input[type='file'] {
+    min-height: 50px;
+    padding: 12px;
+}
+
+/* ========================================
+   Loading States & Animations (Kiosk Only)
+   ======================================== */
+
+/* Faster animations for better perceived performance */
+body[data-page^='kiosk'] * {
+    transition-duration: 0.15s !important;
+}
+
+/* Spinner sizing */
+.spinner,
+.loading {
+    width: 32px !important;
+    height: 32px !important;
+}
+
+/* ========================================
+   Print Preview Specific
+   ======================================== */
+
+/* PDF viewer container */
+.pdf-preview-container {
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+/* PDF thumbnails */
+.pdf-thumbnail {
+    width: 60px;
+    height: auto;
+}
+
+/* ========================================
+   Navigation & Buttons
+   ======================================== */
+
+/* Back buttons should be prominent */
+button[aria-label*='back'],
+button[aria-label*='Back'],
+.back-button {
+    min-width: 50px;
+    min-height: 50px;
+}
+
+/* Primary action buttons */
+button[type='submit'],
+.primary-button,
+.btn-primary {
+    min-height: 52px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* ========================================
+   Kiosk-Specific: Hide Unnecessary Elements
+   ======================================== */
+
+/* Hide browser scrollbars in fullscreen */
+body.fullscreen {
+    overflow: hidden;
+}
+
+/* Hide any tooltips/popovers that might obscure content */
+[role='tooltip'] {
+    max-width: 250px;
+    font-size: 11px;
+}
+
+/* ========================================
+   Accessibility: Focus Indicators
+   ======================================== */
+
+/* Visible focus for keyboard navigation (if enabled) */
+*:focus-visible {
+    outline: 3px solid hsl(var(--primary));
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* Remove focus outline for mouse/touch interactions */
+*:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* ========================================
+   Performance Optimizations (Kiosk Only)
+   ======================================== */
+
+/* GPU acceleration for smooth animations */
+body[data-page^='kiosk'] .animated,
+body[data-page^='kiosk'] [data-animated],
+body[data-page^='kiosk'] .transition {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+}
+
+/* Prevent image dragging */
+body[data-page^='kiosk'] img {
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    pointer-events: none;
+}
+
+/* ========================================
+   Grid & Flexbox Adjustments
+   ======================================== */
+
+/* Ensure grids don't overflow */
+.grid {
+    display: grid;
+    gap: 8px;
+}
+
+/* Responsive grid for pricing cards */
+.grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* ========================================
+   Status Indicators (Large & Visible)
+   ======================================== */
+
+/* Payment progress bar */
+.payment-progress {
+    height: 24px !important;
+    border-radius: 12px;
+}
+
+/* Print status icons */
+.status-icon {
+    width: 64px !important;
+    height: 64px !important;
+}
+
+/* ========================================
+   Error Messages & Alerts
+   ======================================== */
+
+/* Prominent error display */
+.error,
+.alert-error,
+[role='alert'] {
+    font-size: 13px;
+    padding: 12px;
+    margin: 8px 0;
+}
+
+/* ========================================
+   Coin Insertion Display (Payment Page)
+   ======================================== */
+
+/* Large, readable coin amounts */
+.coin-amount,
+.payment-amount {
+    font-size: 2rem !important;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* ========================================
+   Responsive Breakpoints (None - Fixed Width)
+   ======================================== */
+
+/* Override any responsive breakpoints */
+@media (min-width: 640px) {
+    .sm\:hidden {
+        display: none !important;
+    }
+}
+
+@media (min-width: 768px) {
+    .md\:grid-cols-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+    .md\:grid-cols-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+}
+
+/* ========================================
+   Dark Mode Adjustments (if used)
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+    body {
+        /* Ensure sufficient contrast for touchscreen viewing angles */
+        background-color: hsl(var(--background));
+    }
+}
+
+/* ========================================
+   Print Media Query Override
+   ======================================== */
+
+/* Ensure no print styles interfere with screen display */
+@media print {
+    body {
+        display: none !important;
+    }
+}
+
+/* ========================================
+   Utility Classes for Kiosk Mode
+   ======================================== */
+
+.kiosk-hidden {
+    display: none !important;
+}
+
+.kiosk-fullwidth {
+    width: 100% !important;
+}
+
+.kiosk-touch-target {
+    min-width: 44px !important;
+    min-height: 44px !important;
+}
+
+.kiosk-no-scroll {
+    overflow: hidden !important;
+}
+
+/* ========================================
+   Animation Preferences
+   ======================================== */
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ========================================
+   Page-Specific Overrides
+   ======================================== */
+
+/* Home page: Compact layout */
+[data-page='kiosk/home'] .container {
+    padding-top: 12px;
+}
+
+/* File selection: Larger drop zone */
+[data-page='kiosk/file-selection'] .dropzone {
+    min-height: 140px;
+}
+
+/* Payment page: Emphasize amounts */
+[data-page='kiosk/payment'] .amount-display {
+    font-size: 2.5rem;
+}
+
+/* Print status: Center content */
+[data-page='kiosk/print-status'] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

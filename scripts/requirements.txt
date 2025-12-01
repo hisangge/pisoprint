@@ -1,0 +1,9 @@
+# PISO Print - Python Dependencies
+# =================================
+# Install: pip3 install -r requirements.txt
+
+# Serial communication with ESP32
+pyserial>=3.5
+
+# HTTP requests to Laravel API
+requests>=2.28.0

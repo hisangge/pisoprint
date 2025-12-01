@@ -1,0 +1,50 @@
+# PISO Print - ESP32 Coin Listener Service
+# ==========================================
+#
+# Installation:
+#   sudo cp piso-print-esp32.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable piso-print-esp32
+#   sudo systemctl start piso-print-esp32
+#
+# Management:
+#   sudo systemctl status piso-print-esp32
+#   sudo systemctl restart piso-print-esp32
+#   sudo journalctl -u piso-print-esp32 -f
+
+[Unit]
+Description=PisoPrint ESP32 Coin Acceptor Listener
+Documentation=https://github.com/leodyversemilla07/piso-print
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=dialout
+WorkingDirectory=/home/pi/piso-print
+
+# Environment variables (can also be set in /etc/environment)
+Environment="ESP32_SERIAL_PORT=/dev/ttyUSB0"
+Environment="ESP32_BAUD_RATE=115200"
+Environment="ESP32_ID=ESP32_COIN_001"
+Environment="LARAVEL_URL=http://localhost"
+
+# Main command
+ExecStart=/usr/bin/python3 /home/pi/piso-print/scripts/coin_listener.py --auto-detect
+
+# Restart policy
+Restart=always
+RestartSec=5
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=piso-print-esp32
+
+[Install]
+WantedBy=multi-user.target
