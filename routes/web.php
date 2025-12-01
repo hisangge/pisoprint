@@ -139,6 +139,29 @@ Route::prefix('kiosk')->name('kiosk.')->group(function () {
     Route::get('/print-status/{printJob}', [PrintJobController::class, 'status'])->name('print.status');
     Route::post('/print/{printJob}/cancel', [PrintJobController::class, 'cancel'])->name('print.cancel');
 
+    // Print status preview (for design purposes)
+    Route::get('/print-status-preview/{status?}', function (string $status = 'printing') {
+        $validStatuses = ['pending', 'printing', 'completed', 'failed', 'cancelled'];
+        if (!in_array($status, $validStatuses)) {
+            $status = 'printing';
+        }
+
+        return Inertia::render('kiosk/print-status', [
+            'printJob' => [
+                'id' => 999,
+                'fileName' => 'sample-document.pdf',
+                'pages' => 5,
+                'status' => $status,
+                'currentPage' => $status === 'printing' ? 3 : ($status === 'completed' ? 5 : 0),
+                'errorMessage' => $status === 'failed' ? 'Printer is out of paper. Please contact staff.' : null,
+                'startedAt' => now()->subMinutes(2)->toIso8601String(),
+                'completedAt' => $status === 'completed' ? now()->toIso8601String() : null,
+                'colorMode' => 'grayscale',
+                'copies' => 1,
+            ],
+        ]);
+    })->name('print-status-preview');
+
     // Print history
     Route::get('/history', [PrintJobController::class, 'history'])->name('history');
 
@@ -166,7 +189,7 @@ Route::prefix('kiosk')->name('kiosk.')->group(function () {
     })->name('api.usb.check-status');
 
     // USB Upload from Inertia
-    Route::post('/upload-from-usb', [FileUploadController::class, 'uploadFromUsb'])->name('upload-from-usb');
+    Route::post('/upload-from-usb', [FileUploadController::class, 'uploadFromUsb'])->name('uploadFromUsb');
 
     /*
     |--------------------------------------------------------------------------

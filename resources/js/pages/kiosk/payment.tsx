@@ -1,14 +1,20 @@
 import CoinSuggestions from '@/components/coin-suggestions';
-import CoinValue from '@/components/coin-value';
 import SessionTimeout from '@/components/session-timeout';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import kiosk from '@/routes/kiosk';
 import { Head, router, usePage, usePoll } from '@inertiajs/react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CheckCircle2, Coins, RefreshCw, X } from 'lucide-react';
+import {
+    ArrowLeft,
+    CheckCircle2,
+    Coins,
+    RefreshCw,
+    RotateCcw,
+    X,
+} from 'lucide-react';
 import { useState } from 'react';
 
 interface PaymentStatus {
@@ -188,28 +194,28 @@ export default function Payment({
                 warningSeconds={60}
             />
 
-            <div className="min-h-screen bg-zinc-950 p-1">
-                <div className="container mx-auto max-w-md">
+            <div className="min-h-screen overflow-x-hidden bg-white px-4 py-6">
+                <div className="mx-auto max-w-7xl">
                     {/* Header */}
-                    <div className="mb-3 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                    <div className="mb-6 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
                             <Button
                                 variant="outline"
                                 size="icon"
-                                className="h-10 w-10 border-2 border-zinc-700 bg-zinc-800 hover:bg-zinc-700"
+                                className="h-12 w-12 rounded-full border-2 border-sky-400 bg-sky-400 text-white hover:bg-sky-500"
                                 onClick={handleCancel}
                                 disabled={
                                     paymentStatus.isComplete ||
                                     isSubmittingPrint
                                 }
                             >
-                                <ArrowLeft className="h-4 w-4" />
+                                <ArrowLeft className="h-5 w-5" />
                             </Button>
                             <div>
-                                <h1 className="text-lg font-black tracking-tight text-amber-400 uppercase">
-                                    💰 Insert Coins
+                                <h1 className="bg-gradient-to-r from-sky-400/80 to-sky-500/70 bg-clip-text text-xl font-bold text-transparent">
+                                    Insert Coins
                                 </h1>
-                                <p className="text-xs text-zinc-400">
+                                <p className="text-sm text-slate-500">
                                     {uploadInfo.fileName.length > 30
                                         ? uploadInfo.fileName.substring(0, 30) +
                                           '...'
@@ -220,57 +226,87 @@ export default function Payment({
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 px-2 text-xs text-zinc-600 hover:text-zinc-400"
+                            className="text-slate-400 hover:text-slate-600"
                             onClick={handleReset}
                         >
-                            🔄 Reset
+                            <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                            Reset
                         </Button>
                     </div>
 
                     {/* PAYMENT STATUS - FIRST THING USER SEES */}
-                    <div className="mb-3 space-y-2">
-                        <CoinValue
-                            value={paymentStatus.amountPaid}
-                            label="Inserted"
-                            size="large"
-                            variant="inserted"
-                        />
-
-                        <CoinValue
-                            value={paymentStatus.amountRequired}
-                            label="Total Cost"
-                            size="large"
-                            variant="needed"
-                        />
+                    <div className="mb-4 space-y-3">
+                        <Card className="overflow-hidden border-2 border-sky-200 bg-white">
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-100">
+                                            <Coins className="h-5 w-5 text-sky-500" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-slate-500">
+                                                Amount Inserted
+                                            </p>
+                                            <p className="text-2xl font-bold text-sky-600">
+                                                ₱
+                                                {paymentStatus.amountPaid.toFixed(
+                                                    2,
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm text-slate-500">
+                                            Total Cost
+                                        </p>
+                                        <p className="text-2xl font-bold text-slate-700">
+                                            ₱
+                                            {paymentStatus.amountRequired.toFixed(
+                                                2,
+                                            )}
+                                        </p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
 
                         {remainingAmount > 0 && (
                             <motion.div
-                                animate={{ scale: [1, 1.02, 1] }}
+                                animate={{ scale: [1, 1.01, 1] }}
                                 transition={{
                                     repeat: Infinity,
                                     duration: 1.5,
                                 }}
                             >
-                                <CoinValue
-                                    value={remainingAmount}
-                                    label="Insert More"
-                                    size="huge"
-                                    variant="remaining"
-                                />
+                                <Card className="overflow-hidden border-2 border-amber-300 bg-amber-50">
+                                    <CardContent className="p-4">
+                                        <div className="flex items-center justify-center gap-3">
+                                            <div className="text-center">
+                                                <p className="text-sm font-medium text-amber-600">
+                                                    Please Insert
+                                                </p>
+                                                <p className="text-4xl font-black text-amber-600">
+                                                    ₱
+                                                    {remainingAmount.toFixed(2)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             </motion.div>
                         )}
                     </div>
 
                     {/* Progress Bar */}
-                    <Card className="mb-3 border-2 border-zinc-700 bg-zinc-800/50">
-                        <CardContent className="p-3">
-                            <div className="space-y-2">
+                    <Card className="mb-4 border-2 border-sky-200 bg-white">
+                        <CardContent className="p-4">
+                            <div className="space-y-3">
                                 <Progress
                                     value={progressPercentage}
-                                    className="h-6"
+                                    className="h-4"
                                 />
                                 <div className="text-center">
-                                    <span className="text-base font-bold text-white">
+                                    <span className="text-lg font-bold text-sky-600">
                                         {(isNaN(progressPercentage)
                                             ? 0
                                             : progressPercentage
@@ -278,10 +314,10 @@ export default function Payment({
                                         % Complete
                                     </span>
                                     {remainingAmount > 0 && (
-                                        <div className="mt-1 text-sm font-bold text-red-400">
+                                        <p className="mt-1 text-sm text-slate-500">
                                             ₱{remainingAmount.toFixed(2)}{' '}
                                             remaining
-                                        </div>
+                                        </p>
                                     )}
                                 </div>
                             </div>
@@ -289,19 +325,22 @@ export default function Payment({
                     </Card>
 
                     {/* Accepted Coins Visual */}
-                    <Card className="mb-3 border-2 border-amber-600 bg-gradient-to-br from-amber-950/40 to-amber-900/20">
-                        <CardContent className="p-3">
-                            <p className="mb-2 text-center text-xs font-bold text-amber-400">
-                                💳 Accepted Coins
-                            </p>
-                            <div className="flex justify-center gap-2">
+                    <Card className="mb-4 border-2 border-sky-200 bg-white">
+                        <CardHeader className="border-b border-sky-100 bg-sky-50/30 px-4 py-3">
+                            <CardTitle className="flex items-center gap-2 text-sm font-semibold text-sky-700">
+                                <Coins className="h-4 w-4 text-sky-500" />
+                                Accepted Coins
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                            <div className="flex justify-center gap-3">
                                 {[1, 5, 10, 20].map((value) => (
                                     <div
                                         key={value}
                                         className="flex flex-col items-center gap-1"
                                     >
-                                        <div className="flex h-12 w-12 items-center justify-center rounded-full border-3 border-amber-500 bg-gradient-to-br from-amber-300 to-amber-600 shadow-lg">
-                                            <span className="text-sm font-black text-zinc-900">
+                                        <div className="flex h-14 w-14 items-center justify-center rounded-full border-3 border-sky-400 bg-gradient-to-br from-sky-100 to-sky-200 shadow-md">
+                                            <span className="text-base font-black text-sky-700">
                                                 ₱{value}
                                             </span>
                                         </div>
@@ -313,15 +352,17 @@ export default function Payment({
 
                     {/* Payment Complete Message */}
                     {paymentStatus.isComplete && !printError && (
-                        <Card className="mb-3 border-2 border-emerald-600 bg-emerald-950/30">
-                            <CardContent className="p-3">
+                        <Card className="mb-4 border-2 border-emerald-300 bg-emerald-50">
+                            <CardContent className="p-4">
                                 <div className="flex items-center gap-3">
-                                    <CheckCircle2 className="h-6 w-6 flex-shrink-0 text-emerald-400" />
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
+                                        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                                    </div>
                                     <div>
-                                        <p className="text-sm font-bold text-emerald-400">
-                                            ✅ Payment Complete!
+                                        <p className="font-bold text-emerald-700">
+                                            Payment Complete!
                                         </p>
-                                        <p className="text-xs text-emerald-300">
+                                        <p className="text-sm text-emerald-600">
                                             {isSubmittingPrint
                                                 ? 'Starting print job...'
                                                 : 'Print job submitted successfully'}
@@ -334,15 +375,17 @@ export default function Payment({
 
                     {/* Print Error Message */}
                     {printError && (
-                        <Card className="mb-3 border-2 border-red-600 bg-red-950/30">
-                            <CardContent className="p-3">
+                        <Card className="mb-4 border-2 border-red-300 bg-red-50">
+                            <CardContent className="p-4">
                                 <div className="flex items-center gap-3">
-                                    <X className="h-6 w-6 flex-shrink-0 text-red-400" />
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                                        <X className="h-5 w-5 text-red-600" />
+                                    </div>
                                     <div className="flex-1">
-                                        <p className="text-sm font-bold text-red-400">
-                                            ⚠️ Print Failed
+                                        <p className="font-bold text-red-700">
+                                            Print Failed
                                         </p>
-                                        <p className="mb-2 text-xs text-red-300">
+                                        <p className="mb-3 text-sm text-red-600">
                                             {printError}
                                         </p>
                                         <Button
@@ -354,7 +397,7 @@ export default function Payment({
                                             }}
                                             variant="outline"
                                             size="sm"
-                                            className="border-red-600 text-red-300 hover:bg-red-900/50"
+                                            className="border-red-300 text-red-700 hover:bg-red-100"
                                         >
                                             <RefreshCw className="mr-2 h-3 w-3" />
                                             Try Again
@@ -367,37 +410,38 @@ export default function Payment({
 
                     {/* Coin Suggestions */}
                     {remainingAmount > 0 && (
-                        <div className="mb-3">
+                        <div className="mb-4">
                             <CoinSuggestions totalNeeded={remainingAmount} />
                         </div>
                     )}
 
                     {/* Coin Insertion History */}
                     {paymentStatus.coinInsertions.length > 0 && (
-                        <Card className="mb-3 border-2 border-zinc-700 bg-zinc-800/50">
-                            <CardHeader className="p-3">
-                                <CardTitle className="text-xs font-bold text-white">
+                        <Card className="mb-4 border-2 border-sky-200 bg-white">
+                            <CardHeader className="border-b border-sky-100 bg-sky-50/30 px-4 py-3">
+                                <CardTitle className="flex items-center gap-2 text-sm font-semibold text-sky-700">
+                                    <Coins className="h-4 w-4 text-sky-500" />
                                     Recent Coins Inserted
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-2 p-3 pt-0">
+                            <CardContent className="space-y-2 p-4">
                                 {paymentStatus.coinInsertions
                                     .slice(-5)
                                     .reverse()
                                     .map((coin, index) => (
                                         <div
                                             key={index}
-                                            className="flex items-center justify-between rounded-lg border border-zinc-700 bg-zinc-900/50 p-2"
+                                            className="flex items-center justify-between rounded-lg bg-slate-50 p-3"
                                         >
-                                            <div className="flex items-center gap-2">
-                                                <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-amber-600 bg-gradient-to-br from-amber-400 to-amber-600 text-xs font-bold text-zinc-900">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-sky-400 bg-gradient-to-br from-sky-100 to-sky-200 text-xs font-bold text-sky-700">
                                                     ₱{coin.value}
                                                 </div>
-                                                <span className="text-xs font-bold text-white">
+                                                <span className="text-sm font-medium text-slate-700">
                                                     Coin Inserted
                                                 </span>
                                             </div>
-                                            <span className="text-xs text-zinc-400">
+                                            <span className="text-sm text-slate-500">
                                                 {new Date(
                                                     coin.timestamp,
                                                 ).toLocaleTimeString([], {
@@ -413,66 +457,66 @@ export default function Payment({
                     )}
 
                     {/* Instructions */}
-                    <Alert className="border-2 border-zinc-700 bg-zinc-800/50">
-                        <Coins className="h-4 w-4 text-amber-400" />
-                        <AlertTitle className="text-sm font-bold text-white">
-                            💡 How to Pay
-                        </AlertTitle>
-                        <AlertDescription>
-                            <ol className="mt-2 mb-3 space-y-1 text-xs text-zinc-300">
-                                <li className="flex gap-2">
-                                    <span className="font-bold text-amber-400">
-                                        1.
+                    <Card className="mb-4 border-2 border-sky-200 bg-white">
+                        <CardHeader className="border-b border-sky-100 bg-sky-50/30 px-4 py-3">
+                            <CardTitle className="flex items-center gap-2 text-sm font-semibold text-sky-700">
+                                <Coins className="h-4 w-4 text-sky-500" />
+                                How to Pay
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                            <ol className="space-y-2">
+                                <li className="flex items-start gap-3 rounded-lg bg-slate-50 p-3">
+                                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-600">
+                                        1
                                     </span>
-                                    <span>
+                                    <span className="text-sm text-slate-700">
                                         Insert coins one at a time into the slot
                                     </span>
                                 </li>
-                                <li className="flex gap-2">
-                                    <span className="font-bold text-amber-400">
-                                        2.
+                                <li className="flex items-start gap-3 rounded-lg bg-slate-50 p-3">
+                                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-600">
+                                        2
                                     </span>
-                                    <span>
+                                    <span className="text-sm text-slate-700">
                                         Accepted coins: ₱1, ₱5, ₱10, ₱20
                                     </span>
                                 </li>
-                                <li className="flex gap-2">
-                                    <span className="font-bold text-amber-400">
-                                        3.
+                                <li className="flex items-start gap-3 rounded-lg bg-slate-50 p-3">
+                                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-600">
+                                        3
                                     </span>
-                                    <span>
+                                    <span className="text-sm text-slate-700">
                                         Wait for the full amount to be inserted
                                     </span>
                                 </li>
-                                <li className="flex gap-2">
-                                    <span className="font-bold text-amber-400">
-                                        4.
+                                <li className="flex items-start gap-3 rounded-lg bg-slate-50 p-3">
+                                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-600">
+                                        4
                                     </span>
-                                    <span>
+                                    <span className="text-sm text-slate-700">
                                         Printing starts automatically when
                                         complete
                                     </span>
                                 </li>
                             </ol>
-                        </AlertDescription>
-                    </Alert>
+                        </CardContent>
+                    </Card>
+
+                    {/* Cancel Payment Button */}
+                    {!paymentStatus.isComplete && !printError && (
+                        <Button
+                            variant="outline"
+                            className="h-14 w-full rounded-xl border-2 border-slate-300 bg-white text-base font-semibold text-slate-600 hover:bg-slate-50"
+                            onClick={handleCancel}
+                            disabled={isSubmittingPrint}
+                        >
+                            <X className="mr-2 h-5 w-5" />
+                            Cancel Payment
+                        </Button>
+                    )}
                 </div>
             </div>
-
-            {/* Cancel Payment Button - Outside card at bottom */}
-            {!paymentStatus.isComplete && !printError && (
-                <div className="mt-4 px-4 pb-6">
-                    <Button
-                        variant="outline"
-                        className="h-14 w-full border-2 border-red-600 bg-red-950/30 text-base font-bold text-red-300 hover:bg-red-900/50"
-                        onClick={handleCancel}
-                        disabled={isSubmittingPrint}
-                    >
-                        <X className="mr-2 h-5 w-5" />
-                        Cancel Payment
-                    </Button>
-                </div>
-            )}
         </>
     );
 }

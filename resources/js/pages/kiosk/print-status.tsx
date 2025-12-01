@@ -1,5 +1,4 @@
 import SessionTimeout from '@/components/session-timeout';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -21,6 +20,7 @@ import {
     Loader2,
     Printer,
     RefreshCw,
+    RotateCcw,
     XCircle,
 } from 'lucide-react';
 
@@ -133,8 +133,9 @@ export default function PrintStatus({ printJob: initialJob }: Props) {
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ type: 'spring', duration: 0.5 }}
+                        className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100"
                     >
-                        <CheckCircle2 className="h-24 w-24 text-emerald-400" />
+                        <CheckCircle2 className="h-10 w-10 text-emerald-600" />
                     </motion.div>
                 );
             case 'failed':
@@ -142,24 +143,32 @@ export default function PrintStatus({ printJob: initialJob }: Props) {
                     <motion.div
                         animate={{ rotate: [0, -10, 10, -10, 0] }}
                         transition={{ duration: 0.5 }}
+                        className="flex h-20 w-20 items-center justify-center rounded-full bg-red-100"
                     >
-                        <XCircle className="h-24 w-24 text-red-400" />
+                        <XCircle className="h-10 w-10 text-red-600" />
                     </motion.div>
                 );
             case 'cancelled':
-                return <AlertCircle className="h-24 w-24 text-amber-400" />;
+                return (
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-amber-100">
+                        <AlertCircle className="h-10 w-10 text-amber-600" />
+                    </div>
+                );
             case 'printing':
                 return (
                     <motion.div
-                        animate={{ y: [0, -10, 0] }}
-                        transition={{ repeat: Infinity, duration: 2 }}
+                        animate={{ y: [0, -5, 0] }}
+                        transition={{ repeat: Infinity, duration: 1.5 }}
+                        className="flex h-20 w-20 items-center justify-center rounded-full bg-sky-100"
                     >
-                        <Printer className="h-24 w-24 text-blue-400" />
+                        <Printer className="h-10 w-10 text-sky-600" />
                     </motion.div>
                 );
             default:
                 return (
-                    <Loader2 className="h-24 w-24 animate-spin text-zinc-400" />
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-100">
+                        <Loader2 className="h-10 w-10 animate-spin text-slate-500" />
+                    </div>
                 );
         }
     };
@@ -223,316 +232,372 @@ export default function PrintStatus({ printJob: initialJob }: Props) {
                 warningSeconds={60}
             />
 
-            <div className="min-h-screen bg-zinc-950 p-3">
-                <div className="container mx-auto max-w-2xl">
+            <div className="min-h-screen overflow-x-hidden bg-white px-4 py-6">
+                <div className="mx-auto max-w-7xl">
                     {/* Header */}
-                    <div className="mb-4 flex items-center justify-end">
+                    <div className="mb-6 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-100">
+                                <Printer className="h-6 w-6 text-sky-500" />
+                            </div>
+                            <div>
+                                <h1 className="bg-gradient-to-r from-sky-400/80 to-sky-500/70 bg-clip-text text-xl font-bold text-transparent">
+                                    Print Status
+                                </h1>
+                                <p className="text-sm text-slate-500">
+                                    Track your print job
+                                </p>
+                            </div>
+                        </div>
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="text-xs text-zinc-600 hover:text-zinc-400"
+                            className="text-slate-400 hover:text-slate-600"
                             asChild
                         >
-                            <Link href={kiosk.reset()}>🔄 Reset</Link>
+                            <Link href={kiosk.reset()}>
+                                <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                                Reset
+                            </Link>
                         </Button>
                     </div>
 
-                    {/* Status Card */}
-                    <Card className="mb-4 border-4 border-zinc-700 bg-gradient-to-b from-zinc-800 to-zinc-900 shadow-2xl">
-                        <CardHeader className="p-6">
-                            <div className="flex flex-col items-center space-y-4 text-center">
-                                {getStatusIcon()}
-                                <div>
-                                    <CardTitle className="mb-2 text-3xl font-black tracking-tight text-white uppercase">
-                                        {getStatusText()}
-                                    </CardTitle>
-                                    <CardDescription className="text-base text-zinc-300">
-                                        {getStatusDescription()}
-                                    </CardDescription>
+                    <div className="space-y-4">
+                        {/* Status Card */}
+                        <Card className="overflow-hidden border-2 border-sky-200 bg-white">
+                            <CardHeader className="border-b border-sky-100 bg-sky-50/30 p-6">
+                                <div className="flex flex-col items-center space-y-4 text-center">
+                                    {getStatusIcon()}
+                                    <div>
+                                        <CardTitle className="mb-2 text-2xl font-bold text-slate-800">
+                                            {getStatusText()}
+                                        </CardTitle>
+                                        <CardDescription className="text-base text-slate-500">
+                                            {getStatusDescription()}
+                                        </CardDescription>
+                                    </div>
                                 </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4 p-6 pt-0">
-                            {/* Progress Bar (only show when printing) */}
-                            {isActive && printJob.currentPage && (
-                                <Card className="border-2 border-blue-600 bg-blue-950/30">
-                                    <CardContent className="p-4">
-                                        <div className="space-y-3">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-sm font-bold text-blue-300">
-                                                        Printing Page
-                                                    </p>
-                                                    <p className="text-3xl font-black text-blue-400">
-                                                        {printJob.currentPage} /{' '}
-                                                        {printJob.pages *
-                                                            printJob.copies}
-                                                    </p>
+                            </CardHeader>
+                            <CardContent className="space-y-4 p-6">
+                                {/* Progress Bar (only show when printing) */}
+                                {isActive && printJob.currentPage && (
+                                    <Card className="border-2 border-sky-200 bg-white">
+                                        <CardContent className="p-4">
+                                            <div className="space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-sm font-medium text-slate-500">
+                                                            Printing Page
+                                                        </p>
+                                                        <p className="text-3xl font-bold text-sky-600">
+                                                            {
+                                                                printJob.currentPage
+                                                            }{' '}
+                                                            /{' '}
+                                                            {printJob.pages *
+                                                                printJob.copies}
+                                                        </p>
+                                                    </div>
+                                                    <motion.div
+                                                        animate={{
+                                                            rotate: 360,
+                                                        }}
+                                                        transition={{
+                                                            repeat: Infinity,
+                                                            duration: 2,
+                                                            ease: 'linear',
+                                                        }}
+                                                        className="flex h-14 w-14 items-center justify-center rounded-full bg-sky-100"
+                                                    >
+                                                        <Printer className="h-7 w-7 text-sky-500" />
+                                                    </motion.div>
                                                 </div>
-                                                <motion.div
-                                                    animate={{ rotate: 360 }}
-                                                    transition={{
-                                                        repeat: Infinity,
-                                                        duration: 2,
-                                                        ease: 'linear',
-                                                    }}
-                                                >
-                                                    <Printer className="h-16 w-16 text-blue-400" />
-                                                </motion.div>
+                                                <Progress
+                                                    value={progressPercentage}
+                                                    className="h-4"
+                                                />
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="font-semibold text-sky-600">
+                                                        {progressPercentage.toFixed(
+                                                            0,
+                                                        )}
+                                                        % Complete
+                                                    </span>
+                                                    <span className="text-slate-500">
+                                                        {Math.ceil(
+                                                            printJob.pages *
+                                                                printJob.copies -
+                                                                (printJob.currentPage ||
+                                                                    0),
+                                                        )}{' '}
+                                                        pages remaining
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <Progress
-                                                value={progressPercentage}
-                                                className="h-6"
-                                            />
-                                            <div className="flex justify-between text-sm">
-                                                <span className="font-bold text-white">
-                                                    {progressPercentage.toFixed(
-                                                        0,
-                                                    )}
-                                                    % Complete
-                                                </span>
-                                                <span className="font-bold text-blue-400">
-                                                    {Math.ceil(
-                                                        printJob.pages *
-                                                            printJob.copies -
-                                                            (printJob.currentPage ||
-                                                                0),
-                                                    )}{' '}
-                                                    pages remaining
-                                                </span>
+                                        </CardContent>
+                                    </Card>
+                                )}
+
+                                {/* Print Job Details */}
+                                <Card className="border-2 border-sky-200 bg-white">
+                                    <CardHeader className="border-b border-sky-100 bg-sky-50/30 px-4 py-3">
+                                        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-sky-700">
+                                            <FileText className="h-4 w-4 text-sky-500" />
+                                            Document Details
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3 p-4">
+                                        <div className="rounded-lg bg-slate-50 p-3">
+                                            <p className="text-xs text-slate-500">
+                                                File Name
+                                            </p>
+                                            <p className="truncate text-sm font-semibold text-slate-800">
+                                                {printJob.fileName}
+                                            </p>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-3">
+                                            <div className="rounded-lg bg-slate-50 p-3 text-center">
+                                                <p className="text-xs text-slate-500">
+                                                    Pages
+                                                </p>
+                                                <p className="text-xl font-bold text-slate-800">
+                                                    {printJob.pages}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg bg-slate-50 p-3 text-center">
+                                                <p className="text-xs text-slate-500">
+                                                    Copies
+                                                </p>
+                                                <p className="text-xl font-bold text-slate-800">
+                                                    {printJob.copies}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg bg-slate-50 p-3 text-center">
+                                                <p className="text-xs text-slate-500">
+                                                    Mode
+                                                </p>
+                                                <p className="text-sm font-bold text-slate-800 capitalize">
+                                                    {printJob.colorMode}
+                                                </p>
                                             </div>
                                         </div>
+
+                                        {printJob.startedAt && (
+                                            <div className="rounded-lg bg-slate-50 p-3">
+                                                <p className="text-xs text-slate-500">
+                                                    Started At
+                                                </p>
+                                                <p className="text-sm font-semibold text-slate-800">
+                                                    {new Date(
+                                                        printJob.startedAt,
+                                                    ).toLocaleString([], {
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        second: '2-digit',
+                                                    })}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {printJob.completedAt && (
+                                            <div className="rounded-lg bg-emerald-50 p-3">
+                                                <p className="text-xs text-emerald-600">
+                                                    Completed At
+                                                </p>
+                                                <p className="text-sm font-semibold text-emerald-700">
+                                                    {new Date(
+                                                        printJob.completedAt,
+                                                    ).toLocaleString([], {
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        second: '2-digit',
+                                                    })}
+                                                </p>
+                                            </div>
+                                        )}
                                     </CardContent>
                                 </Card>
-                            )}
 
-                            {/* Print Job Details */}
-                            <Card className="border-2 border-zinc-700 bg-zinc-900/50">
-                                <CardHeader className="p-4">
-                                    <CardTitle className="flex items-center gap-2 text-base font-bold text-white">
-                                        <FileText className="h-5 w-5 text-amber-400" />
-                                        Document Details
+                                {/* Error Recovery (show when failed) */}
+                                {hasFailed && (
+                                    <div className="space-y-4">
+                                        <Card className="border-2 border-red-300 bg-red-50">
+                                            <CardContent className="p-4">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
+                                                        <AlertTriangle className="h-5 w-5 text-red-600" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-red-700">
+                                                            Print Job Failed
+                                                        </p>
+                                                        <p className="text-sm text-red-600">
+                                                            {printJob.errorMessage ||
+                                                                'An error occurred while printing your document. Please try again or contact staff for assistance.'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <Button
+                                                onClick={handleRetryJob}
+                                                className="h-14 rounded-xl bg-sky-500 text-base font-semibold text-white hover:bg-sky-600"
+                                            >
+                                                <RefreshCw className="mr-2 h-5 w-5" />
+                                                Retry Print
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                onClick={handleCancelJob}
+                                                className="h-14 rounded-xl border-2 border-slate-300 text-base font-semibold text-slate-600 hover:bg-slate-50"
+                                            >
+                                                <XCircle className="mr-2 h-5 w-5" />
+                                                Cancel
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Action Buttons */}
+                                {!hasFailed && (
+                                    <div className="flex gap-3">
+                                        {isActive && (
+                                            <Button
+                                                variant="outline"
+                                                className="h-14 flex-1 rounded-xl border-2 border-slate-300 text-base font-semibold text-slate-600 hover:bg-slate-50"
+                                                onClick={handleCancelJob}
+                                            >
+                                                <XCircle className="mr-2 h-5 w-5" />
+                                                Cancel Job
+                                            </Button>
+                                        )}
+
+                                        {(isComplete || hasFailed) && (
+                                            <motion.div
+                                                className="flex-1"
+                                                whileHover={{ scale: 1.01 }}
+                                                whileTap={{ scale: 0.99 }}
+                                            >
+                                                <Button
+                                                    className="h-14 w-full rounded-xl bg-sky-500 text-base font-semibold text-white shadow-lg hover:bg-sky-600"
+                                                    asChild
+                                                >
+                                                    <Link href={kiosk.home()}>
+                                                        <Home className="mr-2 h-5 w-5" />
+                                                        Return to Home
+                                                    </Link>
+                                                </Button>
+                                            </motion.div>
+                                        )}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Instructions Alert */}
+                        {isActive && (
+                            <Card className="border-2 border-amber-200 bg-amber-50">
+                                <CardHeader className="border-b border-amber-100 bg-amber-50/50 px-4 py-3">
+                                    <CardTitle className="flex items-center gap-2 text-sm font-semibold text-amber-700">
+                                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                        Important - Please Wait
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-3 p-4 pt-0">
-                                    <div className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-3">
-                                        <p className="truncate text-sm font-bold text-white">
-                                            {printJob.fileName}
-                                        </p>
-                                    </div>
-
-                                    <div className="grid grid-cols-3 gap-3">
-                                        <div className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-3 text-center">
-                                            <p className="text-xs text-zinc-400">
-                                                Pages
-                                            </p>
-                                            <p className="text-xl font-bold text-white">
-                                                {printJob.pages}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-3 text-center">
-                                            <p className="text-xs text-zinc-400">
-                                                Copies
-                                            </p>
-                                            <p className="text-xl font-bold text-white">
-                                                {printJob.copies}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-3 text-center">
-                                            <p className="text-xs text-zinc-400">
-                                                Mode
-                                            </p>
-                                            <p className="text-sm font-bold text-white capitalize">
-                                                {printJob.colorMode}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {printJob.startedAt && (
-                                        <div className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-3">
-                                            <p className="text-xs text-zinc-400">
-                                                Started At
-                                            </p>
-                                            <p className="text-sm font-bold text-white">
-                                                {new Date(
-                                                    printJob.startedAt,
-                                                ).toLocaleString([], {
-                                                    hour: '2-digit',
-                                                    minute: '2-digit',
-                                                    second: '2-digit',
-                                                })}
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {printJob.completedAt && (
-                                        <div className="rounded-lg border border-emerald-700 bg-emerald-950/30 p-3">
-                                            <p className="text-xs text-emerald-400">
-                                                Completed At
-                                            </p>
-                                            <p className="text-sm font-bold text-white">
-                                                {new Date(
-                                                    printJob.completedAt,
-                                                ).toLocaleString([], {
-                                                    hour: '2-digit',
-                                                    minute: '2-digit',
-                                                    second: '2-digit',
-                                                })}
-                                            </p>
-                                        </div>
-                                    )}
+                                <CardContent className="p-4">
+                                    <ul className="space-y-2">
+                                        <li className="flex items-start gap-3 rounded-lg bg-white p-3">
+                                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-600">
+                                                1
+                                            </span>
+                                            <span className="text-sm text-slate-700">
+                                                Do not remove USB drive yet
+                                            </span>
+                                        </li>
+                                        <li className="flex items-start gap-3 rounded-lg bg-white p-3">
+                                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-600">
+                                                2
+                                            </span>
+                                            <span className="text-sm text-slate-700">
+                                                Stay near the printer to collect
+                                                pages
+                                            </span>
+                                        </li>
+                                        <li className="flex items-start gap-3 rounded-lg bg-white p-3">
+                                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-600">
+                                                3
+                                            </span>
+                                            <span className="text-sm text-slate-700">
+                                                Wait until all pages are printed
+                                            </span>
+                                        </li>
+                                        <li className="flex items-start gap-3 rounded-lg bg-white p-3">
+                                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-600">
+                                                4
+                                            </span>
+                                            <span className="text-sm text-slate-700">
+                                                Contact staff if printer stops
+                                            </span>
+                                        </li>
+                                    </ul>
                                 </CardContent>
                             </Card>
+                        )}
 
-                            {/* Error Recovery (show when failed) */}
-                            {hasFailed && (
-                                <div className="space-y-3">
-                                    <Alert className="border-2 border-red-600 bg-red-950/30">
-                                        <AlertTriangle className="h-5 w-5 text-red-400" />
-                                        <AlertTitle className="text-base font-bold text-red-400">
-                                            ⚠️ Print Job Failed
-                                        </AlertTitle>
-                                        <AlertDescription className="text-sm text-red-300">
-                                            {printJob.errorMessage ||
-                                                'An error occurred while printing your document. Please try again or contact staff for assistance.'}
-                                        </AlertDescription>
-                                    </Alert>
-
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <Button
-                                            onClick={handleRetryJob}
-                                            className="h-14 border-2 border-blue-600 bg-blue-600 text-base font-bold hover:bg-blue-700"
-                                        >
-                                            <RefreshCw className="mr-2 h-5 w-5" />
-                                            Retry Print
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            onClick={handleCancelJob}
-                                            className="h-14 border-2 border-red-600 bg-red-950/30 text-base font-bold text-red-300 hover:bg-red-900/50"
-                                        >
-                                            <XCircle className="mr-2 h-5 w-5" />
-                                            Cancel
-                                        </Button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Action Buttons */}
-                            {!hasFailed && (
-                                <div className="flex gap-3">
-                                    {isActive && (
-                                        <Button
-                                            variant="outline"
-                                            className="h-14 flex-1 border-2 border-red-600 bg-red-950/30 text-base font-bold text-red-300 hover:bg-red-900/50"
-                                            onClick={handleCancelJob}
-                                        >
-                                            <XCircle className="mr-2 h-5 w-5" />
-                                            Cancel Job
-                                        </Button>
-                                    )}
-
-                                    {(isComplete || hasFailed) && (
-                                        <motion.div
-                                            className="flex-1"
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
-                                        >
-                                            <Button
-                                                className="h-16 w-full rounded-xl border-4 border-emerald-600 bg-gradient-to-br from-emerald-500 to-emerald-700 text-lg font-black text-white uppercase shadow-2xl hover:from-emerald-400 hover:to-emerald-600"
-                                                asChild
-                                            >
-                                                <Link href={kiosk.home()}>
-                                                    <Home className="mr-2 h-6 w-6" />
-                                                    Return to Home
-                                                </Link>
-                                            </Button>
-                                        </motion.div>
-                                    )}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Instructions Alert */}
-                    {isActive && (
-                        <Alert className="border-2 border-amber-600 bg-amber-950/30">
-                            <Printer className="h-5 w-5 text-amber-400" />
-                            <AlertTitle className="text-base font-bold text-amber-400">
-                                ⚠️ Important - Please Wait
-                            </AlertTitle>
-                            <AlertDescription>
-                                <ul className="mt-3 space-y-2 text-sm text-amber-300">
-                                    <li className="flex gap-2">
-                                        <span className="font-bold">1.</span>
-                                        <span>Do not remove USB drive yet</span>
-                                    </li>
-                                    <li className="flex gap-2">
-                                        <span className="font-bold">2.</span>
-                                        <span>
-                                            Stay near the printer to collect
-                                            pages
-                                        </span>
-                                    </li>
-                                    <li className="flex gap-2">
-                                        <span className="font-bold">3.</span>
-                                        <span>
-                                            Wait until all pages are printed
-                                        </span>
-                                    </li>
-                                    <li className="flex gap-2">
-                                        <span className="font-bold">4.</span>
-                                        <span>
-                                            Contact staff if printer stops
-                                        </span>
-                                    </li>
-                                </ul>
-                            </AlertDescription>
-                        </Alert>
-                    )}
-
-                    {/* Success Message */}
-                    {isComplete && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
-                        >
-                            <Alert className="border-2 border-emerald-600 bg-emerald-950/30">
-                                <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                                <AlertTitle className="text-xl font-bold text-emerald-400">
-                                    ✅ Print Job Complete!
-                                </AlertTitle>
-                                <AlertDescription>
-                                    <div className="mt-3 space-y-2 text-sm text-emerald-300">
-                                        <p className="font-bold">
-                                            📄 Your document has been printed
+                        {/* Success Message */}
+                        {isComplete && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.3 }}
+                            >
+                                <Card className="border-2 border-emerald-300 bg-emerald-50">
+                                    <CardHeader className="border-b border-emerald-100 bg-emerald-50/50 px-4 py-3">
+                                        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                            Print Job Complete!
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-4">
+                                        <p className="mb-3 font-medium text-emerald-700">
+                                            Your document has been printed
                                             successfully!
                                         </p>
-                                        <ul className="ml-4 list-disc space-y-1">
-                                            <li>
-                                                Collect your pages from the
-                                                printer tray
+                                        <ul className="space-y-2">
+                                            <li className="flex items-start gap-3 rounded-lg bg-white p-3">
+                                                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                                                <span className="text-sm text-slate-700">
+                                                    Collect your pages from the
+                                                    printer tray
+                                                </span>
                                             </li>
-                                            <li>
-                                                Check that you have all{' '}
-                                                {printJob.pages *
-                                                    printJob.copies}{' '}
-                                                pages
+                                            <li className="flex items-start gap-3 rounded-lg bg-white p-3">
+                                                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                                                <span className="text-sm text-slate-700">
+                                                    Check that you have all{' '}
+                                                    {printJob.pages *
+                                                        printJob.copies}{' '}
+                                                    pages
+                                                </span>
                                             </li>
-                                            <li>
-                                                You can now remove your USB
-                                                drive
+                                            <li className="flex items-start gap-3 rounded-lg bg-white p-3">
+                                                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                                                <span className="text-sm text-slate-700">
+                                                    You can now remove your USB
+                                                    drive
+                                                </span>
                                             </li>
                                         </ul>
-                                        <p className="mt-3 text-xs text-emerald-400">
+                                        <p className="mt-4 text-center text-sm text-emerald-600">
                                             Thank you for using Piso Print! 🎉
                                         </p>
-                                    </div>
-                                </AlertDescription>
-                            </Alert>
-                        </motion.div>
-                    )}
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+                        )}
+                    </div>
                 </div>
             </div>
         </>

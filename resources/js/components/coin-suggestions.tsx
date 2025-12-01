@@ -1,5 +1,5 @@
-import { Lightbulb } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Coins } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 interface Props {
     totalNeeded: number;
@@ -66,21 +66,28 @@ export default function CoinSuggestions({ totalNeeded }: Props) {
     }
 
     return (
-        <Alert className="border-amber-600 bg-amber-950/20">
-            <Lightbulb className="h-4 w-4 text-amber-400" />
-            <AlertTitle className="text-sm font-bold text-amber-400">
-                You can pay ₱{totalNeeded.toFixed(2)} with:
-            </AlertTitle>
-            <AlertDescription>
-                <ul className="mt-2 space-y-1 text-xs text-amber-200">
+        <Card className="overflow-hidden border-2 border-sky-200 bg-white">
+            <CardHeader className="border-b border-sky-100 bg-sky-50/30 pb-3">
+                <CardTitle className="flex items-center gap-2 text-base font-bold text-sky-700">
+                    <Coins className="h-5 w-5 text-sky-500" />
+                    You can pay ₱{totalNeeded.toFixed(2)} with:
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+                <div className="space-y-2">
                     {suggestions.map((suggestion, index) => (
-                        <li key={index} className="flex items-center gap-2">
-                            <span className="text-amber-400">•</span>
-                            <span className="font-mono">{suggestion}</span>
-                        </li>
+                        <div
+                            key={index}
+                            className="flex items-center gap-2 rounded-lg bg-slate-50 p-3"
+                        >
+                            <span className="text-sky-500">•</span>
+                            <span className="font-mono text-sm font-semibold text-slate-900">
+                                {suggestion}
+                            </span>
+                        </div>
                     ))}
-                </ul>
-            </AlertDescription>
-        </Alert>
+                </div>
+            </CardContent>
+        </Card>
     );
 }

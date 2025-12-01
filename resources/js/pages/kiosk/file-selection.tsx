@@ -1,24 +1,22 @@
 import SessionTimeout from '@/components/session-timeout';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import kiosk from '@/routes/kiosk';
-import { Head, Link, router, useForm, usePoll } from '@inertiajs/react';
+import { Head, Link, router, usePoll } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 import {
     AlertCircle,
     ArrowLeft,
-    Bell,
-    CheckCircle,
+    ArrowRight,
+    CheckCircle2,
     FileText,
+    FolderOpen,
     HardDrive,
     Loader2,
+    RotateCcw,
+    Smartphone,
+    UploadCloud,
     Wifi,
     X,
 } from 'lucide-react';
@@ -75,13 +73,8 @@ export default function FileSelection({
     const [usbData, setUsbData] = useState(initialUsbData);
     const [pendingUpload, setPendingUpload] = useState(initialPendingUpload);
     const [selectedFile, setSelectedFile] = useState<UsbFile | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
     const hasFilesRef = useRef(initialUsbData.files.length > 0);
-
-    // Form handling for USB Upload
-    const { post, processing, reset, clearErrors, setData } = useForm({
-        device: '',
-        file_path: '',
-    });
 
     // --- POLLING LOGIC ---
     usePoll(
@@ -115,40 +108,43 @@ export default function FileSelection({
 
     const handleFileSelect = (file: UsbFile) => {
         setSelectedFile(file);
-        clearErrors();
     };
 
     const handleClearFile = () => {
         setSelectedFile(null);
-        clearErrors();
     };
 
     const handleUpload = () => {
-        if (!selectedFile || processing) return;
+        if (!selectedFile || isUploading) return;
 
         console.log('Starting USB upload for file:', selectedFile.name);
+        console.log('Full path:', selectedFile.full_path);
+        console.log('Device:', selectedFile.device);
+        console.log('Path:', selectedFile.path);
 
-        setData({
-            device: selectedFile.device,
-            file_path: selectedFile.path,
-        });
+        setIsUploading(true);
 
-        post(kiosk.uploadFromUsb.url(), {
-            onSuccess: (response) => {
-                console.log('USB upload successful:', response);
-                reset();
-                setSelectedFile(null);
-                clearErrors();
+        // Use router.post directly with the data to avoid async state issues with setData
+        router.post(
+            kiosk.uploadFromUsb.url(),
+            {
+                device: selectedFile.device,
+                file_path: selectedFile.path,
             },
-            onError: (err) => {
-                console.error('Upload failed:', err);
-                // Don't reset the form on error so user can try again
+            {
+                onSuccess: () => {
+                    console.log('USB upload successful');
+                    setSelectedFile(null);
+                },
+                onError: (err) => {
+                    console.error('Upload failed:', err);
+                    // Don't reset the selection on error so user can try again
+                },
+                onFinish: () => {
+                    setIsUploading(false);
+                },
             },
-            onFinish: () => {
-                // Clear form data but keep selected file for retry
-                clearErrors();
-            },
-        });
+        );
     };
 
     const handleAcceptUpload = () => {
@@ -173,294 +169,313 @@ export default function FileSelection({
                 warningSeconds={60}
             />
 
-            <div className="min-h-screen bg-zinc-950 p-1">
-                <div className="container mx-auto max-w-md">
+            <div className="min-h-screen bg-white px-4 py-6">
+                <div className="mx-auto max-w-7xl">
                     {/* PENDING UPLOAD ACCEPTANCE SCREEN */}
                     {pendingUpload ? (
-                        <div className="flex min-h-[calc(100vh-8px)] flex-col items-center justify-center px-2">
+                        <div className="flex min-h-[80vh] flex-col items-center justify-center">
                             {/* Success Animation */}
                             <motion.div
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
+                                initial={{ scale: 0, rotate: -180 }}
+                                animate={{ scale: 1, rotate: 0 }}
                                 transition={{
                                     type: 'spring',
                                     stiffness: 200,
                                     damping: 15,
                                 }}
-                                className="mb-4 flex justify-center"
+                                className="mb-8"
                             >
-                                <div className="rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 p-4 shadow-2xl">
-                                    <Bell className="h-16 w-16 text-white" />
+                                <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shadow-lg shadow-emerald-100">
+                                    <Smartphone className="h-12 w-12" />
+                                    <div className="absolute -top-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 ring-4 ring-white">
+                                        <CheckCircle2 className="h-5 w-5 text-white" />
+                                    </div>
                                 </div>
                             </motion.div>
 
                             {/* Header */}
-                            <div className="mb-4 text-center">
-                                <h1 className="mb-1 text-2xl font-black tracking-tight text-amber-400 uppercase">
-                                    📱 File Ready!
+                            <motion.div
+                                initial={{ y: 20, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                transition={{ delay: 0.2 }}
+                                className="mb-8 text-center"
+                            >
+                                <h1 className="text-3xl font-light text-sky-700">
+                                    File Received!
                                 </h1>
-                                <p className="text-sm text-zinc-400">
-                                    A document was uploaded from mobile
+                                <p className="mt-2 text-sky-500">
+                                    Ready to print from your device
                                 </p>
-                            </div>
+                            </motion.div>
 
                             {/* File Info Card */}
-                            <Card className="mb-4 w-full border-4 border-emerald-500 bg-gradient-to-br from-emerald-950 to-emerald-900 shadow-2xl">
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-center text-lg font-bold text-white">
-                                        📄 {pendingUpload.original_name}
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="pt-0 text-center">
-                                    <div className="rounded-lg bg-emerald-950/50 p-3">
-                                        <p className="text-base text-zinc-300">
-                                            <span className="text-xl font-black text-emerald-400">
-                                                {pendingUpload.pages}
-                                            </span>{' '}
-                                            {pendingUpload.pages === 1
-                                                ? 'page'
-                                                : 'pages'}
-                                        </p>
-                                        <p className="mt-1 text-xs text-emerald-300">
-                                            Uploaded from mobile device
+                            <motion.div
+                                initial={{ y: 20, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                transition={{ delay: 0.3 }}
+                                className="mb-8 w-full"
+                            >
+                                <Card className="overflow-hidden border-2 border-sky-200 bg-white">
+                                    <div className="bg-sky-50 p-4 text-center">
+                                        <p className="font-bold break-all text-emerald-900">
+                                            {pendingUpload.original_name}
                                         </p>
                                     </div>
-                                </CardContent>
-                            </Card>
+                                    <CardContent className="flex items-center justify-between p-6">
+                                        <div className="text-center">
+                                            <p className="text-3xl font-bold text-slate-900">
+                                                {pendingUpload.pages}
+                                            </p>
+                                            <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">
+                                                Pages
+                                            </p>
+                                        </div>
+                                        <div className="h-10 w-px bg-slate-100" />
+                                        <div className="text-center">
+                                            <p className="text-3xl font-bold text-slate-900">
+                                                {(
+                                                    pendingUpload.size / 1024
+                                                ).toFixed(0)}
+                                            </p>
+                                            <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">
+                                                KB
+                                            </p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
 
                             {/* Accept Button */}
                             <motion.div
-                                initial={{ scale: 0.95 }}
-                                animate={{ scale: 1 }}
-                                transition={{
-                                    repeat: Infinity,
-                                    duration: 2,
-                                    repeatType: 'reverse',
-                                }}
+                                initial={{ y: 20, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                transition={{ delay: 0.4 }}
                                 className="w-full"
                             >
                                 <Button
                                     size="lg"
                                     onClick={handleAcceptUpload}
-                                    className="h-16 w-full rounded-xl border-4 border-emerald-400 bg-gradient-to-br from-emerald-500 to-emerald-700 text-xl font-black text-white uppercase shadow-2xl hover:from-emerald-400 hover:to-emerald-600"
+                                    className="h-14 w-full bg-gradient-to-r from-sky-400 to-sky-500 text-lg font-bold text-white hover:from-sky-500 hover:to-sky-600"
                                 >
-                                    ✅ Preview & Print This File
+                                    Continue to Preview
+                                    <ArrowRight className="ml-2 h-5 w-5" />
                                 </Button>
                             </motion.div>
-
-                            {/* Instructions */}
-                            <div className="mt-4 text-center">
-                                <p className="text-sm text-zinc-500">
-                                    Click above to preview and print your
-                                    document
-                                </p>
-                            </div>
                         </div>
                     ) : (
                         /* NORMAL FILE SELECTION INTERFACE */
                         <>
                             {/* Header */}
-                            <div className="mb-3 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
+                            <div className="mb-6 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
                                     <Button
                                         variant="outline"
                                         size="icon"
-                                        className="h-10 w-10 border-2 border-zinc-700 bg-zinc-800 hover:bg-zinc-700"
+                                        className="h-12 w-12 rounded-full border-2 border-sky-400 bg-sky-400 text-white hover:bg-sky-500"
                                         asChild
                                     >
                                         <Link href={kiosk.home()}>
-                                            <ArrowLeft className="h-4 w-4" />
+                                            <ArrowLeft className="h-5 w-5" />
                                         </Link>
                                     </Button>
-                                    <div>
-                                        <h1 className="text-lg font-black tracking-tight text-amber-400 uppercase">
-                                            🔌 Select File
-                                        </h1>
-                                        <p className="text-xs text-zinc-400">
-                                            USB drive or WiFi upload
-                                        </p>
-                                    </div>
+                                    <h1 className="bg-gradient-to-r from-sky-400/80 to-sky-500/70 bg-clip-text text-xl font-bold text-transparent">
+                                        Select File
+                                    </h1>
                                 </div>
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-8 px-2 text-xs text-zinc-600 hover:text-zinc-400"
+                                    className="text-slate-400 hover:text-slate-600"
                                     asChild
                                 >
-                                    <Link href={kiosk.reset()}>🔄 Reset</Link>
+                                    <Link href={kiosk.reset()}>
+                                        <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                                        Reset
+                                    </Link>
                                 </Button>
                             </div>
 
-                            <div className="space-y-3">
+                            <div className="space-y-6">
                                 {/* USB Status Card */}
-                                <Card className="border-2 border-blue-600 bg-gradient-to-br from-blue-950/40 to-blue-900/20">
-                                    <CardHeader className="p-3 pb-2">
-                                        <CardTitle className="flex items-center gap-2 text-sm font-bold text-blue-400">
-                                            <HardDrive className="h-4 w-4" />
-                                            {usbData.usbDrives.length > 0
-                                                ? '💾 USB Drive Connected'
-                                                : '⏳ Waiting for USB...'}
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="p-3 pt-0">
-                                        {usbData.usbDrives.length > 0 ? (
-                                            <div className="flex flex-wrap gap-2">
-                                                {usbData.usbDrives.map(
-                                                    (drive) => (
-                                                        <span
-                                                            key={drive.device}
-                                                            className="inline-flex items-center rounded-full border-2 border-blue-500 bg-blue-500/20 px-3 py-1 text-xs font-bold text-blue-300"
-                                                        >
-                                                            {drive.device}
-                                                        </span>
-                                                    ),
-                                                )}
+                                <Card
+                                    className={`overflow-hidden border-2 transition-all ${
+                                        usbData.usbDrives.length > 0
+                                            ? 'border-sky-300 bg-sky-50'
+                                            : 'border-sky-200 bg-white'
+                                    }`}
+                                >
+                                    <div className="p-4">
+                                        <div className="flex items-center gap-4">
+                                            <div
+                                                className={`flex h-12 w-12 items-center justify-center rounded-xl ${
+                                                    usbData.usbDrives.length > 0
+                                                        ? 'bg-sky-100 text-sky-500'
+                                                        : 'bg-sky-100 text-sky-400'
+                                                }`}
+                                            >
+                                                <HardDrive className="h-6 w-6" />
                                             </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2 text-zinc-400">
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                <span className="text-sm">
-                                                    Please insert your flash
-                                                    drive...
-                                                </span>
+                                            <div className="flex-1">
+                                                <p
+                                                    className={`font-bold ${
+                                                        usbData.usbDrives
+                                                            .length > 0
+                                                            ? 'text-sky-700'
+                                                            : 'text-sky-700'
+                                                    }`}
+                                                >
+                                                    {usbData.usbDrives.length >
+                                                    0
+                                                        ? 'USB Drive Connected'
+                                                        : 'Insert USB Drive'}
+                                                </p>
+                                                <p
+                                                    className={`text-sm ${
+                                                        usbData.usbDrives
+                                                            .length > 0
+                                                            ? 'text-sky-500'
+                                                            : 'text-sky-500'
+                                                    }`}
+                                                >
+                                                    {usbData.usbDrives.length >
+                                                    0
+                                                        ? `${usbData.usbDrives.length} device(s) found`
+                                                        : 'Waiting for device...'}
+                                                </p>
                                             </div>
-                                        )}
-                                    </CardContent>
+                                            {usbData.usbDrives.length === 0 && (
+                                                <Loader2 className="h-5 w-5 animate-spin text-sky-300" />
+                                            )}
+                                        </div>
+                                    </div>
                                 </Card>
 
                                 {/* Error Display */}
                                 {usbData.error && (
-                                    <Alert className="border-2 border-red-600 bg-red-950/30">
-                                        <AlertCircle className="h-5 w-5 text-red-400" />
-                                        <AlertTitle className="text-sm font-bold text-red-400">
-                                            ⚠️ Upload Failed
-                                        </AlertTitle>
-                                        <AlertDescription className="text-sm text-red-300">
+                                    <Alert className="border border-sky-300 bg-sky-50">
+                                        <AlertCircle className="h-4 w-4 text-sky-600" />
+                                        <AlertTitle>Error</AlertTitle>
+                                        <AlertDescription>
                                             {usbData.error}
                                         </AlertDescription>
                                     </Alert>
                                 )}
 
                                 {/* Main Area: Either File Grid OR Selected File View */}
-                                <Card className="border-2 border-zinc-700 bg-zinc-800/50">
-                                    <CardHeader className="p-3 pb-2">
-                                        <CardTitle className="flex items-center gap-2 text-sm font-bold text-white">
-                                            <FileText className="h-4 w-4 text-amber-400" />
+                                <Card className="overflow-hidden border-2 border-sky-200 bg-white">
+                                    <CardHeader className="border-b border-sky-100 bg-sky-50/30 pb-3">
+                                        <CardTitle className="flex items-center gap-2 text-base font-bold text-sky-700">
+                                            <FolderOpen className="h-5 w-5 text-sky-500" />
                                             {selectedFile
-                                                ? 'Selected File'
-                                                : 'PDF Files'}
+                                                ? 'Selected Document'
+                                                : 'PDF Documents'}
                                         </CardTitle>
                                     </CardHeader>
-                                    <CardContent className="p-3 pt-0">
+                                    <CardContent className="p-4">
                                         {/* VIEW 1: SELECTED FILE (Ready to Upload) */}
                                         {selectedFile ? (
-                                            <div className="flex flex-col justify-center space-y-3">
+                                            <div className="space-y-6">
                                                 <motion.div
                                                     initial={{
-                                                        scale: 0.9,
+                                                        scale: 0.95,
                                                         opacity: 0,
                                                     }}
                                                     animate={{
                                                         scale: 1,
                                                         opacity: 1,
                                                     }}
-                                                    className="flex w-full flex-col items-center rounded-xl border-2 border-emerald-500/50 bg-emerald-950/20 p-4 text-center"
+                                                    className="rounded-xl bg-sky-50 p-4 ring-1 ring-sky-100"
                                                 >
-                                                    <div className="mb-3 rounded-full bg-emerald-500/20 p-3">
-                                                        <FileText className="h-8 w-8 text-emerald-400" />
-                                                    </div>
-                                                    <h3 className="mb-1 text-base font-bold break-all text-white">
-                                                        {selectedFile.name}
-                                                    </h3>
-                                                    <p className="mb-4 text-sm text-emerald-300">
-                                                        {
-                                                            selectedFile.size_formatted
-                                                        }
-                                                    </p>
-
-                                                    <div className="grid w-full grid-cols-2 gap-3">
-                                                        <Button
-                                                            variant="outline"
-                                                            onClick={
-                                                                handleClearFile
-                                                            }
-                                                            disabled={
-                                                                processing
-                                                            }
-                                                            className="h-10 border-2 border-zinc-600 text-sm hover:bg-zinc-800"
-                                                        >
-                                                            <X className="mr-2 h-4 w-4" />
-                                                            Cancel
-                                                        </Button>
-                                                        <Button
-                                                            onClick={
-                                                                handleUpload
-                                                            }
-                                                            disabled={
-                                                                processing
-                                                            }
-                                                            className="h-10 border-2 border-emerald-500 bg-emerald-600 text-sm font-bold hover:bg-emerald-500"
-                                                        >
-                                                            {processing ? (
-                                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                            ) : (
-                                                                <CheckCircle className="mr-2 h-4 w-4" />
-                                                            )}
-                                                            Upload
-                                                        </Button>
+                                                    <div className="flex items-start gap-4">
+                                                        <div className="rounded-lg bg-sky-100 p-3 text-sky-600">
+                                                            <FileText className="h-8 w-8" />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <h3 className="bg-gradient-to-r from-sky-600/90 to-sky-700/80 bg-clip-text font-bold break-all text-transparent">
+                                                                {
+                                                                    selectedFile.name
+                                                                }
+                                                            </h3>
+                                                            <p className="mt-1 text-sm font-medium text-sky-600">
+                                                                {
+                                                                    selectedFile.size_formatted
+                                                                }
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 </motion.div>
-                                                <p className="text-center text-xs text-zinc-500">
-                                                    Click Upload to preview your
-                                                    document
-                                                </p>
+
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={
+                                                            handleClearFile
+                                                        }
+                                                        disabled={isUploading}
+                                                        className="h-12 rounded-xl border-2 border-sky-200 font-semibold text-sky-600 hover:bg-sky-50"
+                                                    >
+                                                        <X className="mr-2 h-4 w-4" />
+                                                        Cancel
+                                                    </Button>
+                                                    <Button
+                                                        onClick={handleUpload}
+                                                        disabled={isUploading}
+                                                        className="h-12 rounded-xl bg-gradient-to-r from-sky-400 to-sky-500 font-semibold text-white hover:from-sky-500 hover:to-sky-600"
+                                                    >
+                                                        {isUploading ? (
+                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        ) : (
+                                                            <UploadCloud className="mr-2 h-4 w-4" />
+                                                        )}
+                                                        Upload
+                                                    </Button>
+                                                </div>
                                             </div>
                                         ) : (
                                             /* VIEW 2: FILE GRID (Browse) */
                                             <>
                                                 {usbData.files.length === 0 ? (
-                                                    <div className="flex h-32 flex-col items-center justify-center text-center text-zinc-500">
-                                                        <FileText className="mb-2 h-10 w-10 opacity-20" />
-                                                        <p className="text-base font-bold">
-                                                            No PDF Files Found
-                                                        </p>
-                                                        <p className="text-sm">
+                                                    <div className="flex h-40 flex-col items-center justify-center text-center">
+                                                        <div className="rounded-full bg-sky-100 p-4">
+                                                            <FileText className="h-8 w-8 text-sky-300" />
+                                                        </div>
+                                                        <p className="mt-4 font-medium text-sky-500">
                                                             {usbData.usbDrives
                                                                 .length === 0
-                                                                ? 'Waiting for drive...'
-                                                                : 'This drive has no PDF files.'}
+                                                                ? 'Please insert a USB drive'
+                                                                : 'No PDF files found on drive'}
                                                         </p>
                                                     </div>
                                                 ) : (
-                                                    <div className="grid max-h-40 grid-cols-1 gap-2 overflow-y-auto">
+                                                    <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
                                                         {usbData.files.map(
                                                             (file) => (
                                                                 <motion.div
                                                                     key={`${file.device}-${file.path}`}
                                                                     whileHover={{
-                                                                        scale: 1.02,
+                                                                        scale: 1.01,
                                                                     }}
                                                                     whileTap={{
-                                                                        scale: 0.98,
+                                                                        scale: 0.99,
                                                                     }}
                                                                     onClick={() =>
                                                                         handleFileSelect(
                                                                             file,
                                                                         )
                                                                     }
-                                                                    className="cursor-pointer rounded-lg border-2 border-zinc-700 bg-zinc-800/50 p-3 transition-all hover:border-amber-500 hover:bg-amber-950/20"
+                                                                    className="cursor-pointer rounded-xl border border-transparent bg-sky-50/50 p-3 transition-all hover:border-sky-200 hover:bg-sky-50 hover:shadow-sm"
                                                                 >
                                                                     <div className="flex items-center gap-3">
-                                                                        <div className="rounded-lg bg-amber-500/20 p-2 text-amber-400">
+                                                                        <div className="rounded-lg bg-white p-2 text-sky-500 shadow-sm">
                                                                             <FileText className="h-5 w-5" />
                                                                         </div>
                                                                         <div className="min-w-0 flex-1">
-                                                                            <p className="truncate text-sm font-bold text-white">
+                                                                            <p className="truncate bg-gradient-to-r from-sky-600/90 to-sky-700/80 bg-clip-text font-semibold text-transparent">
                                                                                 {
                                                                                     file.name
                                                                                 }
                                                                             </p>
-                                                                            <p className="text-xs text-zinc-400">
+                                                                            <p className="text-xs text-sky-400">
                                                                                 {
                                                                                     file.size_formatted
                                                                                 }
@@ -478,56 +493,58 @@ export default function FileSelection({
                                 </Card>
 
                                 {/* WiFi Upload Section */}
-                                <Card className="border-2 border-purple-600 bg-gradient-to-br from-purple-950/40 to-purple-900/20">
-                                    <CardHeader className="p-3 pb-2">
-                                        <CardTitle className="flex items-center gap-2 text-sm font-bold text-purple-300">
-                                            <Wifi className="h-4 w-4" />
-                                            📱 WiFi Upload
-                                        </CardTitle>
-                                        <CardDescription className="text-xs text-purple-400">
-                                            No USB? Scan QR code with your phone
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="flex flex-col items-center gap-3 p-3 pt-0">
-                                        <div className="rounded-xl border-4 border-white bg-white p-2 shadow-lg">
-                                            <QRCodeSVG
-                                                value={
-                                                    wifiInfo.url +
-                                                    '/mobile/upload'
-                                                }
-                                                size={100}
-                                            />
-                                        </div>
-                                        <div className="w-full space-y-2 rounded-lg border-2 border-purple-600/50 bg-purple-950/30 p-3">
-                                            <div className="flex justify-between">
-                                                <span className="text-sm text-zinc-400">
-                                                    WiFi:
-                                                </span>
-                                                <span className="text-sm font-bold text-white">
-                                                    {wifiInfo.ssid}
-                                                </span>
+                                <Card className="overflow-hidden border-2 border-sky-200 bg-white">
+                                    <div className="p-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sky-100">
+                                                <Wifi className="h-6 w-6 text-sky-500" />
                                             </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-sm text-zinc-400">
-                                                    Password:
-                                                </span>
-                                                <span className="font-mono text-sm font-bold text-white">
-                                                    {wifiInfo.password}
-                                                </span>
+                                            <div className="flex-1">
+                                                <p className="font-bold text-sky-700">
+                                                    WiFi Upload
+                                                </p>
+                                                <p className="text-sm text-sky-500">
+                                                    Scan to upload from phone
+                                                </p>
                                             </div>
                                         </div>
-                                        <p className="text-center text-xs text-purple-300">
-                                            {wifiInfo.url}/mobile/upload
-                                        </p>
+                                    </div>
+                                    <CardContent className="p-6">
+                                        <div className="flex flex-col items-center gap-6">
+                                            <div className="rounded-2xl border-2 border-dashed border-sky-300 bg-gradient-to-br from-sky-100/50 to-sky-200/30 p-4">
+                                                <QRCodeSVG
+                                                    value={
+                                                        wifiInfo.url +
+                                                        '/mobile/upload'
+                                                    }
+                                                    size={120}
+                                                    fgColor="#1e3a8a"
+                                                    bgColor="transparent"
+                                                />
+                                            </div>
+
+                                            <div className="w-full space-y-3 rounded-xl bg-slate-50 p-4 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-500">
+                                                        Network
+                                                    </span>
+                                                    <span className="font-bold text-slate-900">
+                                                        {wifiInfo.ssid}
+                                                    </span>
+                                                </div>
+                                                <div className="h-px bg-slate-200" />
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-500">
+                                                        Password
+                                                    </span>
+                                                    <span className="font-mono font-bold text-slate-900">
+                                                        {wifiInfo.password}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </CardContent>
                                 </Card>
-                            </div>
-
-                            {/* Footer */}
-                            <div className="mt-4 text-center">
-                                <p className="text-xs text-zinc-600">
-                                    Select a file to continue
-                                </p>
                             </div>
                         </>
                     )}

@@ -112,12 +112,28 @@ class FileUploadController extends Controller
         $device = $request->input('device');
         $filePath = $request->input('file_path');
 
-        // Construct path manually - Do NOT use realpath() here
-        // Raspberry Pi mounts are slow; realpath() often fails on the first hit.
-        $mountPoint = config('hardware.usb_mount_point', '/mnt/usb');
-        $fullPath = $mountPoint.'/'.$device.'/'.$filePath;
+        // Construct path based on OS
+        if (PHP_OS_FAMILY === 'Windows') {
+            // On Windows, device is the full drive path (e.g., "D:\\")
+            // filePath is the relative path to the file (e.g., "princess.pdf" or "folder\\file.pdf")
+            // Normalize: ensure device ends with backslash and filePath doesn't start with one
+            $device = rtrim($device, '\\/') . '\\';
+            $filePath = ltrim($filePath, '\\/');
+            $fullPath = $device . $filePath;
+        } else {
+            // On Linux, construct path from mount point
+            $mountPoint = config('hardware.usb_mount_point', '/mnt/usb');
+            $fullPath = $mountPoint.'/'.$device.'/'.$filePath;
+        }
 
-        \Log::info("USB Upload: Starting aggressive copy for $fullPath");
+        \Log::info("USB Upload: Starting copy", [
+            'os' => PHP_OS_FAMILY,
+            'device' => $device,
+            'file_path' => $filePath,
+            'full_path' => $fullPath,
+            'file_exists' => file_exists($fullPath),
+            'is_readable' => file_exists($fullPath) ? is_readable($fullPath) : false,
+        ]);
 
         // 2. Validate Extension (Simple string check)
         $extension = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
@@ -162,7 +178,7 @@ class FileUploadController extends Controller
             $attempts = 0;
             $lastError = '';
 
-            while (! $copied && $attempts < 10) {
+            while (! $copied && $attempts < 5) {
                 $attempts++;
                 try {
                     // Suppress warnings with @ because we expect failure on first attempt
@@ -173,14 +189,14 @@ class FileUploadController extends Controller
                     }
                 } catch (\Throwable $t) {
                     $lastError = $t->getMessage();
-                    \Log::warning("Copy Attempt $attempts failed ($lastError). Retrying in 1000ms...");
-                    usleep(1000000); // Wait 1 second
+                    \Log::warning("Copy Attempt $attempts failed ($lastError). Retrying in 500ms...");
+                    usleep(500000); // Wait 500ms
                     clearstatcache(); // Clear file cache again
                 }
             }
 
             if (! $copied) {
-                throw new \Exception("Failed after 10 attempts. Last error: $lastError");
+                throw new \Exception("Failed after 5 attempts. Last error: $lastError");
             }
 
             \Log::info("USB Upload: Copy successful, file saved to $tempPath");
@@ -582,7 +598,6 @@ class FileUploadController extends Controller
      */
     protected function getUsbFilesData(): array
     {
-        $mountPoint = config('hardware.usb_mount_point', '/media/usb');
         $allowedExtensions = config('hardware.usb_allowed_extensions', ['pdf', 'PDF']);
         $maxFileSize = config('printing.max_file_size');
 
@@ -590,29 +605,37 @@ class FileUploadController extends Controller
         $pdfFiles = [];
 
         try {
-            if (! is_dir($mountPoint)) {
-                return [
-                    'usbDrives' => [],
-                    'files' => [],
-                    'total_files' => 0,
-                    'message' => 'No USB drives detected',
-                ];
+            // Detect OS and get drives accordingly
+            if (PHP_OS_FAMILY === 'Windows') {
+                $mountedDrives = $this->getWindowsRemovableDrives();
+            } else {
+                // Linux/Unix USB mount point
+                $mountPoint = config('hardware.usb_mount_point', '/media/usb');
+                if (! is_dir($mountPoint)) {
+                    return [
+                        'usbDrives' => [],
+                        'files' => [],
+                        'total_files' => 0,
+                        'message' => 'No USB drives detected',
+                    ];
+                }
+
+                $mountedDrives = [];
+                if ($handle = opendir($mountPoint)) {
+                    while (false !== ($entry = readdir($handle))) {
+                        if ($entry != '.' && $entry != '..' && is_dir($mountPoint.'/'.$entry) && is_readable($mountPoint.'/'.$entry)) {
+                            $mountedDrives[] = $mountPoint.'/'.$entry;
+                        }
+                    }
+                    closedir($handle);
+                }
             }
 
-            $mountedDrives = [];
-            if ($handle = opendir($mountPoint)) {
-                while (false !== ($entry = readdir($handle))) {
-                    if ($entry != '.' && $entry != '..' && is_dir($mountPoint.'/'.$entry) && is_readable($mountPoint.'/'.$entry)) {
-                        $mountedDrives[] = $mountPoint.'/'.$entry;
-                    }
-                }
-                closedir($handle);
-            }
             foreach ($mountedDrives as $drivePath) {
                 if (is_dir($drivePath) && is_readable($drivePath)) {
-                    $deviceName = basename($drivePath);
+                    // On Windows, drivePath is like "D:\" - store the full drive path for later use
                     $usbDrives[] = [
-                        'device' => $deviceName,
+                        'device' => $drivePath,  // Store full drive path (e.g., "D:\\")
                         'path' => $drivePath,
                         'mounted_at' => now()->toIso8601String(),
                     ];
@@ -633,13 +656,19 @@ class FileUploadController extends Controller
                                     continue;
                                 }
 
-                                $relativePath = str_replace($drivePath.'/', '', $filePath);
+                                // Calculate relative path by removing the drive path prefix
+                                // Normalize the drive path to ensure proper matching
+                                $normalizedDrivePath = rtrim($drivePath, '\\/') . DIRECTORY_SEPARATOR;
+                                $relativePath = $filePath;
+                                if (strpos($filePath, $normalizedDrivePath) === 0) {
+                                    $relativePath = substr($filePath, strlen($normalizedDrivePath));
+                                }
 
                                 $pdfFiles[] = [
                                     'name' => $file->getBasename(),
-                                    'path' => $relativePath,
-                                    'full_path' => $filePath,
-                                    'device' => $deviceName,
+                                    'path' => $relativePath,  // Relative path (e.g., "princess.pdf" or "folder\\file.pdf")
+                                    'full_path' => $filePath,  // Full path for debugging
+                                    'device' => $drivePath,  // Store full drive path (e.g., "D:\\")
                                     'size' => $fileSize,
                                     'size_formatted' => $this->formatFileSize($fileSize),
                                     'modified_at' => date('c', $file->getMTime()),
@@ -671,6 +700,64 @@ class FileUploadController extends Controller
                 'error' => 'Failed to load USB files',
             ];
         }
+    }
+
+    /**
+     * Get removable drives on Windows systems.
+     * Uses WMIC (Windows Management Instrumentation Command-line) to detect removable drives.
+     */
+    protected function getWindowsRemovableDrives(): array
+    {
+        $removableDrives = [];
+
+        try {
+            // Method 1: Use WMIC to get removable drives
+            $output = [];
+            $returnVar = 0;
+            exec('wmic logicaldisk where "DriveType=2" get DeviceID 2>nul', $output, $returnVar);
+            
+            if ($returnVar === 0 && count($output) > 1) {
+                // Skip the header line and process drive letters
+                for ($i = 1; $i < count($output); $i++) {
+                    $driveLetter = trim($output[$i]);
+                    if (!empty($driveLetter) && strlen($driveLetter) === 2 && substr($driveLetter, 1, 1) === ':') {
+                        $drivePath = $driveLetter . '\\';
+                        if (is_dir($drivePath) && is_readable($drivePath)) {
+                            $removableDrives[] = $drivePath;
+                        }
+                    }
+                }
+            }
+
+            // Method 2: Fallback - Check common drive letters D: through Z:
+            if (empty($removableDrives)) {
+                for ($letter = 'D'; $letter <= 'Z'; $letter++) {
+                    $drivePath = $letter . ':\\';
+                    if (is_dir($drivePath) && is_readable($drivePath)) {
+                        // Try to determine if it's a removable drive by checking for typical system folders
+                        // Removable drives typically don't have Windows/Program Files folders
+                        $hasWindowsFolder = is_dir($drivePath . 'Windows');
+                        $hasProgramFiles = is_dir($drivePath . 'Program Files');
+                        
+                        if (!$hasWindowsFolder && !$hasProgramFiles) {
+                            $removableDrives[] = $drivePath;
+                        }
+                    }
+                }
+            }
+
+            logger()->info('Windows removable drives detected', [
+                'drives' => $removableDrives,
+                'method' => !empty($removableDrives) ? 'wmic' : 'fallback',
+            ]);
+
+        } catch (\Exception $e) {
+            logger()->error('Failed to detect Windows removable drives', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $removableDrives;
     }
 
     /**

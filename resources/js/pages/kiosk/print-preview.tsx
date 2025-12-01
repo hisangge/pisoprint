@@ -20,7 +20,7 @@ import type {
 import type { CostCalculation, UploadInfo } from '@/types/models/upload-info';
 import { Head, Link, router, useRemember } from '@inertiajs/react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Coins, FileText, Printer } from 'lucide-react';
+import { ArrowLeft, Coins, FileText, Printer, RotateCcw } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 interface Props {
@@ -127,114 +127,191 @@ export default function PrintPreview({ uploadInfo }: Props) {
         <>
             <Head title="Print Preview" />
 
-            <div className="min-h-screen overflow-x-hidden bg-zinc-950 p-3">
-                <div className="mx-auto w-full max-w-3xl">
+            <div className="min-h-screen overflow-x-hidden bg-white px-4 py-6">
+                <div className="mx-auto max-w-7xl">
                     {/* Header */}
-                    <div className="mb-4 flex items-center justify-between">
+                    <div className="mb-6 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <Button
                                 variant="outline"
                                 size="icon"
-                                className="h-12 w-12 flex-shrink-0 border-2 border-zinc-700 bg-zinc-800 hover:bg-zinc-700"
+                                className="h-12 w-12 rounded-full border-2 border-sky-400 bg-sky-400 text-white hover:bg-sky-500"
                                 asChild
                             >
                                 <Link href={kiosk.upload()}>
                                     <ArrowLeft className="h-5 w-5" />
                                 </Link>
                             </Button>
-                            <div className="min-w-0 flex-1">
-                                <h1 className="truncate text-2xl font-black tracking-tight text-amber-400 uppercase">
-                                    📄 Your Document is Ready
-                                </h1>
-                                <p className="text-sm text-zinc-400">
-                                    Review settings and cost
-                                </p>
-                            </div>
+                            <h1 className="bg-gradient-to-r from-sky-400/80 to-sky-500/70 bg-clip-text text-xl font-bold text-transparent">
+                                Print Preview
+                            </h1>
                         </div>
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="text-xs text-zinc-600 hover:text-zinc-400"
+                            className="text-slate-400 hover:text-slate-600"
                             asChild
                         >
-                            <Link href={kiosk.reset()}>🔄 Reset</Link>
+                            <Link href={kiosk.reset()}>
+                                <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                                Reset
+                            </Link>
                         </Button>
                     </div>
 
-                    {/* PDF Preview - Expanded for better view */}
-                    {uploadInfo.preview_url && (
-                        <Card className="mb-4 border-2 border-zinc-700 bg-zinc-800/50">
-                            <CardHeader className="p-3">
-                                <CardTitle className="text-sm font-bold text-white">
-                                    📄 Document Preview
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-3 pt-0">
-                                <PdfPreviewViewer
-                                    fileUrl={uploadInfo.preview_url}
-                                />
-                            </CardContent>
+                    <div className="space-y-6">
+                        {/* Top Section - Cost Summary (Moved to top for visibility) */}
+                        <Card className="overflow-hidden border-2 border-sky-200 bg-white">
+                            <div className="p-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sky-100">
+                                        <Coins className="h-6 w-6 text-sky-500" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-bold text-sky-700">
+                                            Cost Summary
+                                        </p>
+                                        <p className="text-sm text-sky-500">
+                                            Review before payment
+                                        </p>
+                                    </div>
+                                    {cost && !calculating && (
+                                        <div className="text-right">
+                                            <p className="text-3xl font-black text-sky-600">
+                                                {formatCurrency(cost.cost)}
+                                            </p>
+                                            <p className="text-xs text-slate-500">
+                                                {cost.total_pages} pages ×{' '}
+                                                {formatCurrency(
+                                                    cost.price_per_page,
+                                                )}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </Card>
-                    )}
 
-                    <div className="grid w-full gap-4 md:grid-cols-2">
-                        {/* Left Column - File Info & Settings */}
-                        <div className="min-w-0 space-y-4">
+                        {/* Continue Button - Prominent position */}
+                        {cost && !calculating && !calculationError && (
+                            <motion.div
+                                initial={{ y: 10, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                transition={{ delay: 0.2 }}
+                            >
+                                <Button
+                                    size="lg"
+                                    className="h-14 w-full rounded-xl bg-gradient-to-r from-sky-400 to-sky-500 text-lg font-bold text-white hover:from-sky-500 hover:to-sky-600"
+                                    onClick={handleContinue}
+                                >
+                                    <Coins className="mr-2 h-5 w-5" />
+                                    Insert {formatCurrency(cost.cost)} to Print
+                                </Button>
+                            </motion.div>
+                        )}
+
+                        {/* Error or Loading State */}
+                        {calculating && (
+                            <div className="py-4 text-center">
+                                <div className="mb-2 text-2xl">⏳</div>
+                                <p className="text-sm text-slate-500">
+                                    Calculating cost...
+                                </p>
+                            </div>
+                        )}
+                        {calculationError && (
+                            <Card className="border-2 border-red-200 bg-red-50 p-4">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-sm text-red-600">
+                                        {calculationError}
+                                    </p>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="border-red-300 text-red-600 hover:bg-red-100"
+                                        onClick={calculateCost}
+                                    >
+                                        Retry
+                                    </Button>
+                                </div>
+                            </Card>
+                        )}
+
+                        {/* PDF Preview */}
+                        {uploadInfo.preview_url && (
+                            <Card className="overflow-hidden border-2 border-sky-200 bg-white">
+                                <CardHeader className="border-b border-sky-100 bg-sky-50/30 pb-3">
+                                    <CardTitle className="flex items-center gap-2 text-base font-bold text-sky-700">
+                                        <FileText className="h-5 w-5 text-sky-500" />
+                                        Document Preview
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4">
+                                    <PdfPreviewViewer
+                                        fileUrl={uploadInfo.preview_url}
+                                    />
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        <div className="grid gap-4 md:grid-cols-2">
                             {/* File Information */}
-                            <Card className="border-2 border-zinc-700 bg-zinc-800/50">
-                                <CardHeader className="p-4">
-                                    <CardTitle className="flex items-center gap-2 text-base font-bold text-white">
-                                        <FileText className="h-5 w-5 text-blue-400" />
+                            <Card className="overflow-hidden border-2 border-sky-200 bg-white">
+                                <CardHeader className="border-b border-sky-100 bg-sky-50/30 pb-3">
+                                    <CardTitle className="flex items-center gap-2 text-base font-bold text-sky-700">
+                                        <FileText className="h-5 w-5 text-sky-500" />
                                         Document Info
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-3 p-4 pt-0">
-                                    <div className="flex justify-between rounded-lg border border-zinc-700 bg-zinc-900/50 p-3">
-                                        <span className="text-sm text-zinc-400">
-                                            Filename:
-                                        </span>
-                                        <span className="max-w-[180px] truncate text-sm font-bold text-white">
-                                            {uploadInfo.original_name}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between rounded-lg border border-zinc-700 bg-zinc-900/50 p-3">
-                                        <span className="text-sm text-zinc-400">
-                                            Total Pages:
-                                        </span>
-                                        <span className="text-sm font-bold text-white">
-                                            {uploadInfo.pages} pages
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between rounded-lg border border-zinc-700 bg-zinc-900/50 p-3">
-                                        <span className="text-sm text-zinc-400">
-                                            File Size:
-                                        </span>
-                                        <span className="text-sm font-bold text-white">
-                                            {uploadInfo.size
-                                                ? (
-                                                      uploadInfo.size /
-                                                      1024 /
-                                                      1024
-                                                  ).toFixed(2)
-                                                : '0.00'}{' '}
-                                            MB
-                                        </span>
+                                <CardContent className="p-4">
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between rounded-lg bg-slate-50 p-3">
+                                            <span className="text-sm text-slate-500">
+                                                Filename
+                                            </span>
+                                            <span className="max-w-[180px] truncate text-sm font-semibold text-slate-900">
+                                                {uploadInfo.original_name}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between rounded-lg bg-slate-50 p-3">
+                                            <span className="text-sm text-slate-500">
+                                                Pages
+                                            </span>
+                                            <span className="text-sm font-semibold text-slate-900">
+                                                {uploadInfo.pages}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between rounded-lg bg-slate-50 p-3">
+                                            <span className="text-sm text-slate-500">
+                                                Size
+                                            </span>
+                                            <span className="text-sm font-semibold text-slate-900">
+                                                {uploadInfo.size
+                                                    ? (
+                                                          uploadInfo.size /
+                                                          1024 /
+                                                          1024
+                                                      ).toFixed(2)
+                                                    : '0.00'}{' '}
+                                                MB
+                                            </span>
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>
 
                             {/* Print Settings */}
-                            <Card className="border-2 border-zinc-700 bg-zinc-800/50">
-                                <CardHeader className="p-4">
-                                    <CardTitle className="text-base font-bold text-white">
-                                        <Printer className="mr-2 inline-block h-5 w-5 text-amber-400" />
+                            <Card className="overflow-hidden border-2 border-sky-200 bg-white">
+                                <CardHeader className="border-b border-sky-100 bg-sky-50/30 pb-3">
+                                    <CardTitle className="flex items-center gap-2 text-base font-bold text-sky-700">
+                                        <Printer className="h-5 w-5 text-sky-500" />
                                         Print Settings
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-4 p-4 pt-0">
+                                <CardContent className="space-y-4 p-4">
                                     {/* Color Mode */}
-                                    <div className="space-y-3">
-                                        <Label className="text-sm font-bold text-white">
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-semibold text-slate-600">
                                             Color Mode
                                         </Label>
                                         <RadioGroup
@@ -246,283 +323,224 @@ export default function PrintPreview({ uploadInfo }: Props) {
                                                         value as ColorMode,
                                                 })
                                             }
-                                            className="space-y-2"
+                                            className="grid grid-cols-3 gap-2"
                                         >
-                                            <div className="flex cursor-pointer items-center space-x-3 rounded-lg border-2 border-zinc-700 bg-zinc-900/50 p-3 transition-all hover:border-zinc-600 hover:bg-zinc-900">
+                                            <div
+                                                className={`flex cursor-pointer flex-col items-center rounded-lg border-2 p-3 text-center transition-all ${
+                                                    formData.color_mode === 'bw'
+                                                        ? 'border-sky-500 bg-sky-100 ring-2 ring-sky-200'
+                                                        : 'border-sky-200 bg-sky-50/50 hover:border-sky-300 hover:bg-sky-50'
+                                                }`}
+                                                onClick={() =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        color_mode: 'bw',
+                                                    })
+                                                }
+                                            >
                                                 <RadioGroupItem
                                                     value="bw"
                                                     id="bw"
+                                                    className="sr-only"
                                                 />
                                                 <Label
                                                     htmlFor="bw"
-                                                    className="flex flex-1 cursor-pointer items-center justify-between text-sm"
+                                                    className="cursor-pointer text-center"
                                                 >
-                                                    <span className="font-bold text-white">
-                                                        Black & White
+                                                    <span className="block text-xs font-semibold text-slate-700">
+                                                        B&W
                                                     </span>
-                                                    <span className="text-lg font-bold text-amber-400">
-                                                        ₱2/page
+                                                    <span className="block text-sm font-bold text-sky-600">
+                                                        ₱2
                                                     </span>
                                                 </Label>
                                             </div>
-
-                                            <div className="flex cursor-pointer items-center space-x-3 rounded-lg border-2 border-zinc-700 bg-zinc-900/50 p-3 transition-all hover:border-zinc-600 hover:bg-zinc-900">
+                                            <div
+                                                className={`flex cursor-pointer flex-col items-center rounded-lg border-2 p-3 text-center transition-all ${
+                                                    formData.color_mode ===
+                                                    'grayscale'
+                                                        ? 'border-sky-500 bg-sky-100 ring-2 ring-sky-200'
+                                                        : 'border-sky-200 bg-sky-50/50 hover:border-sky-300 hover:bg-sky-50'
+                                                }`}
+                                                onClick={() =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        color_mode: 'grayscale',
+                                                    })
+                                                }
+                                            >
                                                 <RadioGroupItem
                                                     value="grayscale"
                                                     id="grayscale"
+                                                    className="sr-only"
                                                 />
                                                 <Label
                                                     htmlFor="grayscale"
-                                                    className="flex flex-1 cursor-pointer items-center justify-between text-sm"
+                                                    className="cursor-pointer text-center"
                                                 >
-                                                    <span className="font-bold text-white">
-                                                        Grayscale
+                                                    <span className="block text-xs font-semibold text-slate-700">
+                                                        Gray
                                                     </span>
-                                                    <span className="text-lg font-bold text-amber-400">
-                                                        ₱3/page
+                                                    <span className="block text-sm font-bold text-sky-600">
+                                                        ₱3
                                                     </span>
                                                 </Label>
                                             </div>
-
-                                            <div className="flex cursor-pointer items-center space-x-3 rounded-lg border-2 border-purple-600 bg-purple-950/30 p-3 transition-all hover:border-purple-500 hover:bg-purple-950/50">
+                                            <div
+                                                className={`flex cursor-pointer flex-col items-center rounded-lg border-2 p-3 text-center transition-all ${
+                                                    formData.color_mode ===
+                                                    'color'
+                                                        ? 'border-sky-500 bg-sky-100 ring-2 ring-sky-200'
+                                                        : 'border-sky-200 bg-sky-50/50 hover:border-sky-300 hover:bg-sky-50'
+                                                }`}
+                                                onClick={() =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        color_mode: 'color',
+                                                    })
+                                                }
+                                            >
                                                 <RadioGroupItem
                                                     value="color"
                                                     id="color"
+                                                    className="sr-only"
                                                 />
                                                 <Label
                                                     htmlFor="color"
-                                                    className="flex flex-1 cursor-pointer items-center justify-between text-sm"
+                                                    className="cursor-pointer text-center"
                                                 >
-                                                    <span className="font-bold text-white">
-                                                        Full Color ⭐
+                                                    <span className="block text-xs font-semibold text-slate-700">
+                                                        Color
                                                     </span>
-                                                    <span className="text-lg font-bold text-purple-400">
-                                                        ₱5/page
+                                                    <span className="block text-sm font-bold text-sky-600">
+                                                        ₱5
                                                     </span>
                                                 </Label>
                                             </div>
                                         </RadioGroup>
                                     </div>
 
-                                    {/* Number of Copies */}
-                                    <div className="space-y-2">
-                                        <Label
-                                            htmlFor="copies"
-                                            className="text-sm font-bold text-white"
-                                        >
-                                            Number of Copies
-                                        </Label>
-                                        <Select
-                                            value={formData.copies.toString()}
-                                            onValueChange={(value) =>
-                                                setFormData({
-                                                    ...formData,
-                                                    copies: parseInt(value),
-                                                })
-                                            }
-                                        >
-                                            <SelectTrigger
-                                                id="copies"
-                                                className="h-12 border-2 border-zinc-700 bg-zinc-900/50 text-base font-bold text-white"
+                                    {/* Copies and Orientation in a row */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {/* Copies */}
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-semibold text-slate-600">
+                                                Copies
+                                            </Label>
+                                            <Select
+                                                value={formData.copies.toString()}
+                                                onValueChange={(value) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        copies: parseInt(value),
+                                                    })
+                                                }
                                             >
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {[...Array(10)].map((_, i) => (
-                                                    <SelectItem
-                                                        key={i + 1}
-                                                        value={(
-                                                            i + 1
-                                                        ).toString()}
-                                                        className="text-sm"
+                                                <SelectTrigger className="h-10 border-2 border-sky-200 bg-sky-50/50 font-semibold text-slate-700">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {[...Array(10)].map(
+                                                        (_, i) => (
+                                                            <SelectItem
+                                                                key={i + 1}
+                                                                value={(
+                                                                    i + 1
+                                                                ).toString()}
+                                                            >
+                                                                {i + 1}
+                                                            </SelectItem>
+                                                        ),
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {/* Orientation */}
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-semibold text-slate-600">
+                                                Orientation
+                                            </Label>
+                                            <RadioGroup
+                                                value={formData.orientation}
+                                                onValueChange={(value) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        orientation:
+                                                            value as Orientation,
+                                                    })
+                                                }
+                                                className="grid grid-cols-2 gap-2"
+                                            >
+                                                <div
+                                                    className={`flex cursor-pointer items-center justify-center rounded-lg border-2 p-2 transition-all ${
+                                                        formData.orientation ===
+                                                        'portrait'
+                                                            ? 'border-sky-500 bg-sky-100 ring-2 ring-sky-200'
+                                                            : 'border-sky-200 bg-sky-50/50 hover:border-sky-300'
+                                                    }`}
+                                                    onClick={() =>
+                                                        setFormData({
+                                                            ...formData,
+                                                            orientation:
+                                                                'portrait',
+                                                        })
+                                                    }
+                                                >
+                                                    <RadioGroupItem
+                                                        value="portrait"
+                                                        id="portrait"
+                                                        className="sr-only"
+                                                    />
+                                                    <Label
+                                                        htmlFor="portrait"
+                                                        className="cursor-pointer text-lg"
                                                     >
-                                                        {i + 1}{' '}
-                                                        {i === 0
-                                                            ? 'copy'
-                                                            : 'copies'}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    {/* Orientation */}
-                                    <div className="space-y-2">
-                                        <Label className="text-sm font-bold text-white">
-                                            Page Orientation
-                                        </Label>
-                                        <RadioGroup
-                                            value={formData.orientation}
-                                            onValueChange={(value) =>
-                                                setFormData({
-                                                    ...formData,
-                                                    orientation:
-                                                        value as Orientation,
-                                                })
-                                            }
-                                            className="grid grid-cols-2 gap-3"
-                                        >
-                                            <div className="flex cursor-pointer items-center space-x-2 rounded-lg border-2 border-zinc-700 bg-zinc-900/50 p-3 transition-all hover:border-zinc-600 hover:bg-zinc-900">
-                                                <RadioGroupItem
-                                                    value="portrait"
-                                                    id="portrait"
-                                                />
-                                                <Label
-                                                    htmlFor="portrait"
-                                                    className="flex-1 cursor-pointer text-sm font-bold text-white"
+                                                        📄
+                                                    </Label>
+                                                </div>
+                                                <div
+                                                    className={`flex cursor-pointer items-center justify-center rounded-lg border-2 p-2 transition-all ${
+                                                        formData.orientation ===
+                                                        'landscape'
+                                                            ? 'border-sky-500 bg-sky-100 ring-2 ring-sky-200'
+                                                            : 'border-sky-200 bg-sky-50/50 hover:border-sky-300'
+                                                    }`}
+                                                    onClick={() =>
+                                                        setFormData({
+                                                            ...formData,
+                                                            orientation:
+                                                                'landscape',
+                                                        })
+                                                    }
                                                 >
-                                                    Portrait 📄
-                                                </Label>
-                                            </div>
-
-                                            <div className="flex cursor-pointer items-center space-x-2 rounded-lg border-2 border-zinc-700 bg-zinc-900/50 p-3 transition-all hover:border-zinc-600 hover:bg-zinc-900">
-                                                <RadioGroupItem
-                                                    value="landscape"
-                                                    id="landscape"
-                                                />
-                                                <Label
-                                                    htmlFor="landscape"
-                                                    className="flex-1 cursor-pointer text-sm font-bold text-white"
-                                                >
-                                                    Landscape 📃
-                                                </Label>
-                                            </div>
-                                        </RadioGroup>
+                                                    <RadioGroupItem
+                                                        value="landscape"
+                                                        id="landscape"
+                                                        className="sr-only"
+                                                    />
+                                                    <Label
+                                                        htmlFor="landscape"
+                                                        className="cursor-pointer text-lg"
+                                                    >
+                                                        📃
+                                                    </Label>
+                                                </div>
+                                            </RadioGroup>
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>
                         </div>
 
-                        {/* Right Column - Cost Summary */}
-                        <div className="min-w-0 space-y-4">
-                            <Card className="border-4 border-amber-700 bg-gradient-to-b from-zinc-800 to-zinc-900 shadow-2xl">
-                                <CardHeader className="border-b border-zinc-700 bg-zinc-800/50 p-4">
-                                    <CardTitle className="flex items-center gap-2 text-xl font-black text-amber-400 uppercase">
-                                        <Coins className="h-6 w-6" />
-                                        Cost Breakdown
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4 p-4">
-                                    {calculating ? (
-                                        <div className="py-8 text-center">
-                                            <div className="mb-2 text-4xl">
-                                                ⏳
-                                            </div>
-                                            <p className="text-sm text-zinc-400">
-                                                Calculating cost...
-                                            </p>
-                                        </div>
-                                    ) : calculationError ? (
-                                        <div className="py-8 text-center">
-                                            <div className="mb-2 text-4xl">
-                                                ⚠️
-                                            </div>
-                                            <p className="text-sm text-red-400">
-                                                {calculationError}
-                                            </p>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="mt-4"
-                                                onClick={calculateCost}
-                                            >
-                                                Retry
-                                            </Button>
-                                        </div>
-                                    ) : cost ? (
-                                        <>
-                                            {/* Cost Details */}
-                                            <div className="space-y-3 rounded-lg border-2 border-zinc-700 bg-zinc-900/50 p-4">
-                                                <div className="flex justify-between border-b border-zinc-700 pb-2">
-                                                    <span className="text-sm text-zinc-400">
-                                                        Pages to Print
-                                                    </span>
-                                                    <span className="text-base font-bold text-white">
-                                                        {uploadInfo.pages} pages
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between border-b border-zinc-700 pb-2">
-                                                    <span className="text-sm text-zinc-400">
-                                                        Number of Copies
-                                                    </span>
-                                                    <span className="text-base font-bold text-white">
-                                                        {formData.copies}×
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between border-b border-zinc-700 pb-2">
-                                                    <span className="text-sm text-zinc-400">
-                                                        Total Pages
-                                                    </span>
-                                                    <span className="text-base font-bold text-white">
-                                                        {cost.total_pages} pages
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-sm text-zinc-400">
-                                                        Price Per Page
-                                                    </span>
-                                                    <span className="text-base font-bold text-amber-400">
-                                                        {formatCurrency(
-                                                            cost.price_per_page,
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            </div>
+                        {/* Coin Suggestions */}
+                        {cost && !calculating && !calculationError && (
+                            <CoinSuggestions totalNeeded={cost.cost} />
+                        )}
 
-                                            {/* Total Cost - Large Display */}
-                                            <motion.div
-                                                initial={{ scale: 0.95 }}
-                                                animate={{ scale: 1 }}
-                                                className="rounded-xl border-4 border-emerald-600 bg-gradient-to-br from-emerald-950 to-emerald-900 p-6 text-center shadow-xl"
-                                            >
-                                                <p className="mb-2 text-sm font-bold tracking-wider text-emerald-400 uppercase">
-                                                    Total Cost
-                                                </p>
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <Coins className="h-8 w-8 text-emerald-400" />
-                                                    <span className="text-5xl font-black text-emerald-400">
-                                                        {formatCurrency(
-                                                            cost.cost,
-                                                        )}
-                                                    </span>
-                                                </div>
-                                                <p className="mt-3 text-xs text-emerald-300">
-                                                    Insert coins to complete
-                                                    payment
-                                                </p>
-                                            </motion.div>
-
-                                            {/* Coin Suggestions */}
-                                            <CoinSuggestions
-                                                totalNeeded={cost.cost}
-                                            />
-
-                                            {/* Continue Button */}
-                                            <motion.div
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
-                                            >
-                                                <Button
-                                                    size="lg"
-                                                    className="h-16 w-full rounded-xl border-4 border-emerald-600 bg-gradient-to-br from-emerald-500 to-emerald-700 text-lg font-black text-white uppercase shadow-2xl hover:from-emerald-400 hover:to-emerald-600"
-                                                    onClick={handleContinue}
-                                                >
-                                                    <Coins className="mr-2 h-6 w-6" />
-                                                    Insert ₱
-                                                    {cost.cost.toFixed(2)} to
-                                                    Print
-                                                </Button>
-                                            </motion.div>
-
-                                            <p className="text-center text-xs text-zinc-500">
-                                                💡 No payment until coins are
-                                                inserted
-                                            </p>
-                                        </>
-                                    ) : null}
-                                </CardContent>
-                            </Card>
-                        </div>
+                        <p className="text-center text-xs text-slate-400">
+                            💡 No payment until coins are inserted
+                        </p>
                     </div>
                 </div>
             </div>
