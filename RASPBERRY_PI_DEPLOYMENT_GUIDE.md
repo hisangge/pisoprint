@@ -2,335 +2,685 @@
 
 **Complete Step-by-Step Guide for Deploying Piso Print on Raspberry Pi**
 
+> ⚠️ **IMPORTANT**: Follow each step in order. Complete one step fully before moving to the next. Verify each installation before proceeding.
+
 ---
 
 ## Table of Contents
 
-1. [Prerequisites](#1-prerequisites)
-2. [Raspberry Pi Initial Setup](#2-raspberry-pi-initial-setup)
-3. [System Dependencies Installation](#3-system-dependencies-installation)
-4. [Database Setup (MySQL)](#4-database-setup-mysql)
-5. [CUPS Printer Setup](#5-cups-printer-setup)
-6. [Application Deployment](#6-application-deployment)
-7. [Web Server Configuration (Nginx)](#7-web-server-configuration-nginx)
-8. [ESP32 Coin Acceptor Integration](#8-esp32-coin-acceptor-integration)
-9. [WiFi Hotspot Configuration](#9-wifi-hotspot-configuration)
-10. [Kiosk Mode Setup](#10-kiosk-mode-setup)
-11. [Systemd Services](#11-systemd-services)
-12. [Testing & Verification](#12-testing--verification)
-13. [Troubleshooting](#13-troubleshooting)
-14. [Maintenance & Updates](#14-maintenance--updates)
+1. [Prerequisites & Hardware Requirements](#1-prerequisites--hardware-requirements)
+2. [Step 1: Flash Raspberry Pi OS](#step-1-flash-raspberry-pi-os)
+3. [Step 2: First Boot & System Update](#step-2-first-boot--system-update)
+4. [Step 3: Install Git](#step-3-install-git)
+5. [Step 4: Install PHP 8.3](#step-4-install-php-83)
+6. [Step 5: Install Composer](#step-5-install-composer)
+7. [Step 6: Install Node.js 22.x](#step-6-install-nodejs-22x)
+8. [Step 7: Install Nginx Web Server](#step-7-install-nginx-web-server)
+9. [Step 8: Install MySQL/MariaDB Database](#step-8-install-mysqlmariadb-database)
+10. [Step 9: Install CUPS Printing System](#step-9-install-cups-printing-system)
+11. [Step 10: Install Printer Drivers](#step-10-install-printer-drivers)
+12. [Step 11: Clone & Setup Application](#step-11-clone--setup-application)
+13. [Step 12: Configure Nginx for Laravel](#step-12-configure-nginx-for-laravel)
+14. [Step 13: Setup USB Auto-Detection](#step-13-setup-usb-auto-detection)
+15. [Step 14: Install WiFi Hotspot (hostapd)](#step-14-install-wifi-hotspot-hostapd)
+16. [Step 15: Configure DNS (dnsmasq)](#step-15-configure-dns-dnsmasq)
+17. [Step 16: Setup mDNS (Avahi)](#step-16-setup-mdns-avahi)
+18. [Step 17: Setup ESP32 Coin Acceptor](#step-17-setup-esp32-coin-acceptor)
+19. [Step 18: Configure Systemd Services](#step-18-configure-systemd-services)
+20. [Step 19: Setup Kiosk Mode](#step-19-setup-kiosk-mode)
+21. [Step 20: Final Testing & Verification](#step-20-final-testing--verification)
+22. [Troubleshooting](#troubleshooting)
+23. [Maintenance & Updates](#maintenance--updates)
+24. [Quick Reference](#quick-reference)
 
 ---
 
-## 1. Prerequisites
+## 1. Prerequisites & Hardware Requirements
 
-### Hardware Requirements
+### Hardware Checklist
 
-| Component         | Specification                                       |
-| ----------------- | --------------------------------------------------- |
-| **Raspberry Pi**  | Raspberry Pi 4 (4GB/8GB RAM recommended)            |
-| **Storage**       | 32GB+ Class 10 microSD card                         |
-| **Display**       | LAFVIN 7" Touchscreen IPS DSI Display (800×480)     |
-| **ESP32**         | ESP32 Development Board (CH340C, USB-C, 30-Pin)     |
-| **Coin Acceptor** | ALLAN Universal Coinslot 1239 PROMAX Multi-Coin     |
-| **Printer**       | Brother DCP-T720DW (or any CUPS-compatible printer) |
-| **Power**         | 5V 3A USB-C for Pi, 12V 2A for Coin Acceptor        |
+| Component         | Specification                                       | ✓   |
+| ----------------- | --------------------------------------------------- | --- |
+| **Raspberry Pi**  | Raspberry Pi 4 (4GB/8GB RAM recommended)            | ☐   |
+| **Storage**       | 32GB+ Class 10 microSD card                         | ☐   |
+| **Display**       | LAFVIN 7" Touchscreen IPS DSI Display (800×480)     | ☐   |
+| **ESP32**         | ESP32 Development Board (CH340C, USB-C, 30-Pin)     | ☐   |
+| **Coin Acceptor** | ALLAN Universal Coinslot 1239 PROMAX Multi-Coin     | ☐   |
+| **Printer**       | Brother DCP-T720DW (or any CUPS-compatible printer) | ☐   |
+| **Power**         | 5V 3A USB-C for Pi, 12V 2A for Coin Acceptor        | ☐   |
 
-### Software Requirements
+### Software to be Installed (in order)
 
-- **OS**: Raspberry Pi OS (64-bit) - Debian 12 Bookworm
-- **PHP**: 8.3+
-- **Node.js**: 22.x LTS
-- **MySQL**: 8.0+
-- **Nginx**: 1.22+
-- **CUPS**: Latest
+| #   | Software        | Purpose                   |
+| --- | --------------- | ------------------------- |
+| 1   | Raspberry Pi OS | Operating System (64-bit) |
+| 2   | Git             | Version control           |
+| 3   | PHP 8.3         | Laravel backend           |
+| 4   | Composer        | PHP package manager       |
+| 5   | Node.js 22.x    | Frontend build tools      |
+| 6   | Nginx           | Web server                |
+| 7   | MariaDB         | Database                  |
+| 8   | CUPS            | Printing system           |
+| 9   | Brother Driver  | Printer driver            |
+| 10  | hostapd         | WiFi hotspot              |
+| 11  | dnsmasq         | DNS/DHCP server           |
+| 12  | Avahi           | mDNS (local domain)       |
 
 ---
 
-## 2. Raspberry Pi Initial Setup
+## Step 1: Flash Raspberry Pi OS
 
-### 2.1 Flash Raspberry Pi OS
+### 1.1 Download Raspberry Pi Imager
 
-1. Download [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
-2. Select **Raspberry Pi OS (64-bit)** - Debian Bookworm
-3. Click the gear icon (⚙️) to configure:
-    - Set hostname: `pisoprint`
-    - Enable SSH with password authentication
-    - Set username: `pisoprint`
-    - Set password: `pisoprint`
-    - Configure WiFi (for initial setup only)
-    - Set locale and timezone: Asia/Manila
-4. Flash to microSD card
+Download from: https://www.raspberrypi.com/software/
 
-### 2.2 First Boot Configuration
+### 1.2 Configure and Flash
+
+1. Insert microSD card into your computer
+2. Open Raspberry Pi Imager
+3. Click **"Choose OS"** → Select **"Raspberry Pi OS (64-bit)"** - Debian Bookworm
+4. Click **"Choose Storage"** → Select your microSD card
+5. Click the **gear icon (⚙️)** to configure:
+
+    | Setting       | Value                                 |
+    | ------------- | ------------------------------------- |
+    | Hostname      | `pisoprint`                           |
+    | Enable SSH    | ✓ (with password)                     |
+    | Username      | `pisoprint`                           |
+    | Password      | `pisoprint`                           |
+    | WiFi SSID     | Your WiFi network (for initial setup) |
+    | WiFi Password | Your WiFi password                    |
+    | Locale        | `Asia/Manila`                         |
+
+6. Click **"Write"** and wait for completion
+
+### 1.3 Verify
+
+- [ ] microSD card flashed successfully
+- [ ] No errors during write process
+
+**✅ Step 1 Complete** - Insert microSD into Raspberry Pi and power on.
+
+---
+
+## Step 2: First Boot & System Update
+
+### 2.1 Wait for First Boot
+
+Wait 2-3 minutes for Raspberry Pi to fully boot.
+
+### 2.2 Connect via SSH
 
 ```bash
-# Connect via SSH
-ssh pisoprint@pisoprinting.connect
+ssh pisoprint@pisoprint.local
+```
 
-# Update system
-sudo apt update && sudo apt upgrade -y
+Or use the IP address:
 
-# Configure Raspberry Pi settings
+```bash
+ssh pisoprint@<IP_ADDRESS>
+```
+
+Password: `pisoprint`
+
+### 2.3 Update System Packages
+
+```bash
+sudo apt update
+```
+
+**Verify**: You should see package lists being downloaded.
+
+```bash
+sudo apt upgrade -y
+```
+
+**Verify**: System packages are upgraded.
+
+### 2.4 Configure Raspberry Pi Settings
+
+```bash
 sudo raspi-config
 ```
 
-In `raspi-config`:
+Navigate and configure:
 
-- **System Options > Boot / Auto Login**: Desktop Autologin
-- **Interface Options > Serial Port**: Enable hardware serial
-- **Interface Options > SSH**: Enable
-- **Interface Options > I2C**: Enable (for touchscreen)
-- **Localisation Options**: Set timezone to Asia/Manila
-- **Advanced Options > Expand Filesystem**: Expand to use full SD card
+1. **System Options** → **Boot / Auto Login** → **Desktop Autologin**
+2. **Interface Options** → **Serial Port** → Login shell: **No**, Hardware: **Yes**
+3. **Localisation Options** → **Timezone** → Asia → Manila
+4. **Finish** and **Reboot**
 
-```bash
-# Reboot to apply changes
-sudo reboot
-```
-
-### 2.3 Set Static IP (Optional but Recommended)
-
-Edit `/etc/dhcpcd.conf`:
+### 2.5 Verify Step 2
 
 ```bash
-sudo nano /etc/dhcpcd.conf
+# Check system is updated
+cat /etc/os-release
 ```
 
-Add at the end:
+Expected output should show: `Debian GNU/Linux 12 (bookworm)`
 
-```conf
-# Static IP for Ethernet (for maintenance access)
-interface eth0
-    static ip_address=192.168.1.100/24
-    static routers=192.168.1.1
-    static domain_name_servers=8.8.8.8 8.8.4.4
-```
+- [ ] SSH connection successful
+- [ ] System updated
+- [ ] Raspi-config completed
+
+**✅ Step 2 Complete**
 
 ---
 
-## 3. System Dependencies Installation
+## Step 3: Install Git
 
-### 3.1 Install PHP 8.3
+### 3.1 Install Git
 
 ```bash
-# Add PHP repository
+sudo apt install -y git
+```
+
+### 3.2 Verify Installation
+
+```bash
+git --version
+```
+
+**Expected output**: `git version 2.x.x`
+
+- [ ] Git installed successfully
+
+**✅ Step 3 Complete**
+
+---
+
+## Step 4: Install PHP 8.3
+
+### 4.1 Install Prerequisites
+
+```bash
 sudo apt install -y lsb-release apt-transport-https ca-certificates wget
+```
+
+### 4.2 Add PHP Repository
+
+```bash
 wget -qO - https://packages.sury.org/php/apt.gpg | sudo tee /usr/share/keyrings/deb.sury.org-php.gpg > /dev/null
+```
+
+```bash
 echo "deb [signed-by=/usr/share/keyrings/deb.sury.org-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/php.list
+```
 
-# Update and install PHP 8.3
+### 4.3 Update Package List
+
+```bash
 sudo apt update
-sudo apt install -y php8.3-cli php8.3-fpm php8.3-mysql php8.3-mbstring \
-    php8.3-xml php8.3-curl php8.3-zip php8.3-gd php8.3-intl \
-    php8.3-bcmath php8.3-readline php8.3-sqlite3
+```
 
-# Verify installation
+### 4.4 Install PHP 8.3 and Extensions
+
+```bash
+sudo apt install -y php8.3-cli php8.3-fpm php8.3-mysql php8.3-mbstring php8.3-xml php8.3-curl php8.3-zip php8.3-gd php8.3-intl php8.3-bcmath php8.3-readline php8.3-sqlite3
+```
+
+### 4.5 Verify Installation
+
+```bash
 php -v
 ```
 
-### 3.2 Install Composer
+**Expected output**: `PHP 8.3.x`
 
 ```bash
-# Download and install Composer
-curl -sS https://getcomposer.org/installer | php
-sudo mv composer.phar /usr/local/bin/composer
+php -m | grep -E 'mysql|mbstring|xml|curl|zip|gd'
+```
+
+**Expected output**: List of installed extensions
+
+### 4.6 Check PHP-FPM Service
+
+```bash
+sudo systemctl status php8.3-fpm
+```
+
+**Expected**: Active (running)
+
+- [ ] PHP 8.3 installed
+- [ ] All extensions installed
+- [ ] PHP-FPM running
+
+**✅ Step 4 Complete**
+
+---
+
+## Step 5: Install Composer
+
+### 5.1 Download Composer Installer
+
+```bash
+curl -sS https://getcomposer.org/installer -o composer-setup.php
+```
+
+### 5.2 Install Composer Globally
+
+```bash
+sudo php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+```
+
+### 5.3 Remove Installer
+
+```bash
+rm composer-setup.php
+```
+
+### 5.4 Verify Installation
+
+```bash
 composer --version
 ```
 
-### 3.3 Install Node.js 22.x
+**Expected output**: `Composer version 2.x.x`
+
+- [ ] Composer installed globally
+
+**✅ Step 5 Complete**
+
+---
+
+## Step 6: Install Node.js 22.x
+
+### 6.1 Add NodeSource Repository
 
 ```bash
-# Install Node.js via NodeSource
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt install -y nodejs
+```
 
-# Verify installation
+### 6.2 Install Node.js
+
+```bash
+sudo apt install -y nodejs
+```
+
+### 6.3 Verify Installation
+
+```bash
 node -v
+```
+
+**Expected output**: `v22.x.x`
+
+```bash
 npm -v
 ```
 
-### 3.4 Install Additional System Packages
+**Expected output**: `10.x.x`
 
-```bash
-# Install required packages
-sudo apt install -y \
-    nginx \
-    git \
-    curl \
-    unzip \
-    chromium-browser \
-    unclutter \
-    xdotool \
-    onboard \
-    cups \
-    cups-bsd \
-    cups-client \
-    python3 \
-    python3-pip \
-    python3-serial \
-    python3-requests \
-    avahi-daemon \
-    avahi-utils
-```
+- [ ] Node.js 22.x installed
+- [ ] npm installed
+
+**✅ Step 6 Complete**
 
 ---
 
-## 4. Database Setup (MySQL)
+## Step 7: Install Nginx Web Server
 
-### 4.1 Install MySQL 8.0
+### 7.1 Install Nginx
 
 ```bash
-# Install MySQL Server
-sudo apt install -y mariadb-server mariadb-client
-
-# Secure installation
-sudo mysql_secure_installation
-# Follow prompts:
-# - Set root password: yes
-# - Remove anonymous users: yes
-# - Disallow root login remotely: yes
-# - Remove test database: yes
-# - Reload privilege tables: yes
+sudo apt install -y nginx
 ```
 
-### 4.2 Create Database and User
+### 7.2 Start and Enable Nginx
 
 ```bash
-# Login to MySQL
-sudo mysql -u root -p
+sudo systemctl start nginx
+```
 
-# Create database and user
+```bash
+sudo systemctl enable nginx
+```
+
+### 7.3 Verify Installation
+
+```bash
+sudo systemctl status nginx
+```
+
+**Expected**: Active (running)
+
+```bash
+curl -I http://localhost
+```
+
+**Expected**: `HTTP/1.1 200 OK`
+
+### 7.4 Test from Browser
+
+Open in browser: `http://<raspberry_pi_ip>`
+
+You should see the **"Welcome to nginx!"** page.
+
+- [ ] Nginx installed
+- [ ] Nginx running
+- [ ] Web page accessible
+
+**✅ Step 7 Complete**
+
+---
+
+## Step 8: Install MySQL/MariaDB Database
+
+### 8.1 Install MariaDB Server
+
+```bash
+sudo apt install -y mariadb-server mariadb-client
+```
+
+### 8.2 Start and Enable MariaDB
+
+```bash
+sudo systemctl start mariadb
+```
+
+```bash
+sudo systemctl enable mariadb
+```
+
+### 8.3 Secure Installation
+
+```bash
+sudo mysql_secure_installation
+```
+
+**Follow the prompts:**
+
+| Prompt                               | Answer              |
+| ------------------------------------ | ------------------- |
+| Enter current password for root      | Press Enter (blank) |
+| Switch to unix_socket authentication | n                   |
+| Change the root password             | Y                   |
+| New password                         | `pisoprint`         |
+| Remove anonymous users               | Y                   |
+| Disallow root login remotely         | Y                   |
+| Remove test database                 | Y                   |
+| Reload privilege tables              | Y                   |
+
+### 8.4 Create Database and User
+
+```bash
+sudo mysql -u root -p
+```
+
+Enter password: `pisoprint`
+
+Run these SQL commands:
+
+```sql
 CREATE DATABASE pisoprint CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+```sql
 CREATE USER 'pisoprint'@'localhost' IDENTIFIED BY 'pisoprint';
+```
+
+```sql
 GRANT ALL PRIVILEGES ON pisoprint.* TO 'pisoprint'@'localhost';
+```
+
+```sql
 FLUSH PRIVILEGES;
+```
+
+```sql
 EXIT;
 ```
 
-### 4.3 Alternative: SQLite (Simpler Setup)
-
-If you prefer SQLite (no separate database server):
+### 8.5 Verify Database
 
 ```bash
-# SQLite is included with PHP, just ensure the directory is writable
-touch /var/www/piso-print/database/database.sqlite
-chmod 664 /var/www/piso-print/database/database.sqlite
+mysql -u pisoprint -ppisoprint -e "SHOW DATABASES;"
 ```
 
-Update `.env`:
+**Expected**: You should see `pisoprint` in the list.
 
-```env
-DB_CONNECTION=sqlite
-DB_DATABASE=/var/www/piso-print/database/database.sqlite
-```
+- [ ] MariaDB installed
+- [ ] MariaDB running
+- [ ] Database `pisoprint` created
+- [ ] User `pisoprint` created
+
+**✅ Step 8 Complete**
 
 ---
 
-## 5. CUPS Printer Setup
+## Step 9: Install CUPS Printing System
 
-### 5.1 Configure CUPS
+### 9.1 Install CUPS
 
 ```bash
-# Add pisoprint user to lpadmin group
-sudo usermod -a -G lpadmin pisoprint
-sudo usermod -a -G lpadmin www-data
+sudo apt install -y cups
+```
 
-# Enable CUPS web interface
-sudo cupsctl --remote-admin --remote-any --share-printers
+### 9.2 Install Additional CUPS Packages
 
-# Start and enable CUPS
-sudo systemctl enable cups
+```bash
+sudo apt install -y cups-bsd cups-client
+```
+
+### 9.3 Start and Enable CUPS
+
+```bash
 sudo systemctl start cups
 ```
 
-### 5.2 Install Brother DCP-T720DW Drivers
-
 ```bash
-# Download Brother drivers (ARM64)
-cd /tmp
-wget https://download.brother.com/welcome/dlf105450/brcupsconfig5.tar.gz
-wget https://download.brother.com/welcome/dlf101775/dcpt720dwpdrv-2.0.1-1.armhf.deb
-
-# Install driver
-sudo dpkg -i dcpt720dwpdrv-2.0.1-1.armhf.deb
-sudo apt --fix-broken install -y
-
-# Configure CUPS
-tar -xvzf brcupsconfig5.tar.gz
-sudo ./brcupsconfig5/brcupsconfig5
+sudo systemctl enable cups
 ```
 
-### 5.3 Add Printer via Web Interface
-
-1. Open browser: `http://localhost:631`
-2. Go to **Administration** > **Add Printer**
-3. Select USB printer: "Brother DCP-T720DW"
-4. Set name: `Brother_DCP_T720DW_USB`
-5. Make default printer
-
-### 5.4 Verify Printer
+### 9.4 Add User to Printer Admin Group
 
 ```bash
-# List printers
-lpstat -p -d
-
-# Test print
-echo "Test Print from Piso Print Kiosk" | lp -d Brother_DCP_T720DW_USB
-
-# Or print a test page
-lp -d Brother_DCP_T720DW_USB /usr/share/cups/data/testprint
+sudo usermod -a -G lpadmin pisoprint
 ```
+
+```bash
+sudo usermod -a -G lpadmin www-data
+```
+
+### 9.5 Configure CUPS for Remote Access
+
+```bash
+sudo cupsctl --remote-admin --remote-any --share-printers
+```
+
+### 9.6 Restart CUPS
+
+```bash
+sudo systemctl restart cups
+```
+
+### 9.7 Verify Installation
+
+```bash
+sudo systemctl status cups
+```
+
+**Expected**: Active (running)
+
+```bash
+lpstat -v
+```
+
+**Expected**: Lists available printers (may be empty if no printer connected yet)
+
+### 9.8 Access CUPS Web Interface
+
+Open in browser: `http://<raspberry_pi_ip>:631`
+
+You should see the **CUPS Administration** page.
+
+- [ ] CUPS installed
+- [ ] CUPS running
+- [ ] User added to lpadmin group
+- [ ] CUPS web interface accessible
+
+**✅ Step 9 Complete**
 
 ---
 
-## 6. Application Deployment
+## Step 10: Install Printer Drivers
 
-### 6.1 Clone Repository
+> **Note**: This step is for Brother DCP-T720DW. Skip if using a different printer.
+
+### 10.1 Download Brother Drivers
 
 ```bash
-# Create web directory
-sudo mkdir -p /var/www/piso-print
-sudo chown -R pisoprint:www-data /var/www/piso-print
+cd /tmp
+```
 
-# Clone repository
+```bash
+wget https://download.brother.com/welcome/dlf105450/brcupsconfig5.tar.gz
+```
+
+```bash
+wget https://download.brother.com/welcome/dlf101775/dcpt720dwpdrv-2.0.1-1.armhf.deb
+```
+
+### 10.2 Install Driver Package
+
+```bash
+sudo dpkg -i dcpt720dwpdrv-2.0.1-1.armhf.deb
+```
+
+### 10.3 Fix Dependencies (if needed)
+
+```bash
+sudo apt --fix-broken install -y
+```
+
+### 10.4 Configure Brother Driver
+
+```bash
+tar -xvzf brcupsconfig5.tar.gz
+```
+
+```bash
+sudo ./brcupsconfig5/brcupsconfig5
+```
+
+### 10.5 Connect Printer via USB
+
+1. Connect your Brother printer to Raspberry Pi via USB cable
+2. Power on the printer
+
+### 10.6 Add Printer via CUPS Web Interface
+
+1. Open browser: `http://<raspberry_pi_ip>:631`
+2. Go to **Administration** tab
+3. Click **Add Printer**
+4. Login with: `pisoprint` / `pisoprint`
+5. Select your USB printer: **"Brother DCP-T720DW"**
+6. Click **Continue**
+7. Set Name: `Brother_DCP_T720DW_USB`
+8. Check **"Share This Printer"**
+9. Click **Continue**
+10. Select the appropriate PPD/driver
+11. Click **Add Printer**
+12. Set default options and click **Set Default Options**
+
+### 10.7 Set as Default Printer
+
+```bash
+sudo lpadmin -d Brother_DCP_T720DW_USB
+```
+
+### 10.8 Verify Printer
+
+```bash
+lpstat -p -d
+```
+
+**Expected**: Shows printer status and default printer
+
+### 10.9 Test Print
+
+```bash
+echo "Test Print from Piso Print Kiosk" | lp -d Brother_DCP_T720DW_USB
+```
+
+**Expected**: Printer prints the test message
+
+- [ ] Driver installed
+- [ ] Printer connected
+- [ ] Printer added to CUPS
+- [ ] Test print successful
+
+**✅ Step 10 Complete**
+
+---
+
+## Step 11: Clone & Setup Application
+
+### 11.1 Create Web Directory
+
+```bash
+sudo mkdir -p /var/www/piso-print
+```
+
+```bash
+sudo chown -R pisoprint:www-data /var/www/piso-print
+```
+
+### 11.2 Clone Repository
+
+```bash
 cd /var/www
+```
+
+```bash
 git clone https://github.com/hisangge/pisoprint.git piso-print
+```
+
+```bash
 cd piso-print
 ```
 
-### 6.2 Install PHP Dependencies
+### 11.3 Install PHP Dependencies
 
 ```bash
-# Install production dependencies
 composer install --no-dev --optimize-autoloader
 ```
 
-### 6.3 Install Node Dependencies & Build Assets
+**Wait for completion** - This may take several minutes.
+
+### 11.4 Install Node.js Dependencies
 
 ```bash
-# Install npm packages (with ARM64 optimizations)
 npm ci
+```
 
-# Build production assets
+**Wait for completion** - This may take several minutes.
+
+### 11.5 Build Frontend Assets
+
+```bash
 npm run build
 ```
 
-### 6.4 Configure Environment
+### 11.6 Create Environment File
 
 ```bash
-# Copy environment file
 cp .env.example .env
+```
 
-# Generate application key
+### 11.7 Generate Application Key
+
+```bash
 php artisan key:generate
+```
 
-# Edit environment file
+### 11.8 Configure Environment
+
+```bash
 nano .env
 ```
 
-Update `.env` for production:
+Update these values:
 
 ```env
 APP_NAME=PisoPrint
@@ -338,7 +688,6 @@ APP_ENV=production
 APP_DEBUG=false
 APP_URL=http://pisoprinting.connect
 
-# Database Configuration
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
@@ -346,298 +695,109 @@ DB_DATABASE=pisoprint
 DB_USERNAME=pisoprint
 DB_PASSWORD=pisoprint
 
-# Session & Queue
 SESSION_DRIVER=database
 QUEUE_CONNECTION=database
 CACHE_STORE=database
 
-# Hardware Configuration (PRODUCTION - disable mocks)
-ESP32_ID=ESP32_COIN_001
-ESP32_SERIAL_PORT=/dev/ttyUSB0
-ESP32_BAUD_RATE=115200
-ESP32_HEARTBEAT_TIMEOUT=30
 ESP32_MOCK_ENABLED=false
-
-# Printer Configuration (PRODUCTION)
-PRINTER_NAME=Brother_DCP_T720DW_USB
 PRINTER_MOCK_ENABLED=false
 
-# CUPS Configuration
+PRINTER_NAME=Brother_DCP_T720DW_USB
 PRINTING_DRIVER=cups
 PRINTING_DEFAULT_PRINTER_ID=Brother_DCP_T720DW_USB
-CUPS_SERVER_IP=localhost
-CUPS_SERVER_PORT=631
-CUPS_SERVER_USERNAME=pisoprint
-CUPS_SERVER_PASSWORD=pisoprint
-CUPS_SERVER_SECURE=false
 
-# Printing Prices (in Pesos)
-PRICE_PER_PAGE_BW=2.00
-PRICE_PER_PAGE_GRAYSCALE=3.00
-PRICE_PER_PAGE_COLOR=5.00
-
-# USB Configuration
 USB_MOUNT_POINT=/mnt/usb
-
-# WiFi Hotspot Configuration
-WIFI_SSID=PisoPrint_Kiosk
-WIFI_PASSWORD=PisoPrint2025
-WIFI_IP=192.168.4.1
-WIFI_DHCP_RANGE=192.168.4.100,192.168.4.200
-
-# Kiosk Domain
-KIOSK_DOMAIN=pisoprinting.connect
 ```
 
-### 6.5 Run Database Migrations
+Save and exit: `Ctrl+X`, then `Y`, then `Enter`
+
+### 11.9 Run Database Migrations
 
 ```bash
-# Run migrations
 php artisan migrate --force
+```
 
-# Create storage symlink
+### 11.10 Create Storage Link
+
+```bash
 php artisan storage:link
+```
 
-# Cache configuration
+### 11.11 Optimize Application
+
+```bash
 php artisan config:cache
+```
+
+```bash
 php artisan route:cache
+```
+
+```bash
 php artisan view:cache
+```
+
+```bash
 php artisan optimize
 ```
 
-### 6.6 Set Permissions
+### 11.12 Set Permissions
 
 ```bash
-# Set ownership
 sudo chown -R pisoprint:www-data /var/www/piso-print
-sudo chmod -R 755 /var/www/piso-print
-sudo chmod -R 775 /var/www/piso-print/storage
-sudo chmod -R 775 /var/www/piso-print/bootstrap/cache
+```
 
-# Grant serial port access
+```bash
+sudo chmod -R 755 /var/www/piso-print
+```
+
+```bash
+sudo chmod -R 775 /var/www/piso-print/storage
+```
+
+```bash
+sudo chmod -R 775 /var/www/piso-print/bootstrap/cache
+```
+
+### 11.13 Grant Serial Port Access
+
+```bash
 sudo usermod -a -G dialout www-data
+```
+
+```bash
 sudo usermod -a -G dialout pisoprint
 ```
 
-### 6.7 Setup USB Drive Auto-Detection
-
-This section configures automatic USB flash drive detection and mounting for PDF file uploads.
-
-#### 6.7.1 Create USB Mount Directory
+### 11.14 Verify Application Files
 
 ```bash
-# Create mount point directory
-sudo mkdir -p /mnt/usb
-sudo chown pisoprint:www-data /mnt/usb
-sudo chmod 775 /mnt/usb
+ls -la /var/www/piso-print/
 ```
 
-#### 6.7.2 Install USB Automount Dependencies
+**Expected**: Shows application files including `artisan`, `composer.json`, `public/`, etc.
 
-```bash
-# Install required packages
-sudo apt install -y usbmount udisks2 ntfs-3g exfat-fuse exfat-utils
-```
+- [ ] Repository cloned
+- [ ] Composer dependencies installed
+- [ ] Node dependencies installed
+- [ ] Frontend built
+- [ ] Environment configured
+- [ ] Database migrated
+- [ ] Permissions set
 
-#### 6.7.3 Create USB Manager Script
-
-```bash
-# Copy the USB manager script
-sudo cp /var/www/piso-print/scripts/usb-manager.sh /usr/local/bin/usb-manager.sh
-sudo chmod +x /usr/local/bin/usb-manager.sh
-```
-
-#### 6.7.4 Create Udev Rules for USB Detection
-
-```bash
-# Create udev rule for USB storage devices
-sudo nano /etc/udev/rules.d/99-usb-automount.rules
-```
-
-Add the following content:
-
-```udev
-# Piso Print USB Auto-Mount Rules
-# Triggers on USB storage device insertion/removal
-
-# When USB storage device is added
-ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_TYPE}!="", ENV{ID_BUS}=="usb", \
-    RUN+="/usr/local/bin/usb-manager.sh add %k"
-
-# When USB storage device is removed
-ACTION=="remove", SUBSYSTEM=="block", ENV{ID_BUS}=="usb", \
-    RUN+="/usr/local/bin/usb-manager.sh remove %k"
-```
-
-#### 6.7.5 Create Systemd Service for USB Events (Alternative Method)
-
-```bash
-# Create systemd service template for USB mount
-sudo nano /etc/systemd/system/usb-mount@.service
-```
-
-Add:
-
-```ini
-[Unit]
-Description=Mount USB Drive %i
-After=local-fs.target
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-ExecStart=/usr/local/bin/usb-manager.sh add %i
-ExecStop=/usr/local/bin/usb-manager.sh remove %i
-
-[Install]
-WantedBy=multi-user.target
-```
-
-#### 6.7.6 Update USB Manager Script for Raspberry Pi
-
-Edit the USB manager script to use the correct paths:
-
-```bash
-sudo nano /usr/local/bin/usb-manager.sh
-```
-
-Ensure it contains:
-
-```bash
-#!/bin/bash
-
-# Configuration for Raspberry Pi
-MOUNT_ROOT="/mnt/usb"
-API_URL="http://127.0.0.1/api/kiosk/usb/detected"
-LOG_FILE="/var/log/usb-manager.log"
-WEB_UID=$(id -u www-data)
-WEB_GID=$(id -g www-data)
-
-ACTION=$1
-DEVICE_NAME=$2
-
-DEVICE_PATH="/dev/$DEVICE_NAME"
-MOUNT_POINT="$MOUNT_ROOT/$DEVICE_NAME"
-
-log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
-}
-
-if [ "$ACTION" == "add" ]; then
-    # Wait for device to be ready
-    sleep 2
-
-    # Create mount point
-    mkdir -p "$MOUNT_POINT"
-
-    # Detect filesystem type
-    FSTYPE=$(blkid -o value -s TYPE "$DEVICE_PATH" 2>/dev/null)
-
-    # Mount based on filesystem type
-    case "$FSTYPE" in
-        vfat|fat32|fat16)
-            mount -t vfat -o uid=$WEB_UID,gid=$WEB_GID,umask=0022,utf8 "$DEVICE_PATH" "$MOUNT_POINT"
-            ;;
-        ntfs)
-            mount -t ntfs-3g -o uid=$WEB_UID,gid=$WEB_GID,umask=0022 "$DEVICE_PATH" "$MOUNT_POINT"
-            ;;
-        exfat)
-            mount -t exfat -o uid=$WEB_UID,gid=$WEB_GID,umask=0022 "$DEVICE_PATH" "$MOUNT_POINT"
-            ;;
-        ext4|ext3|ext2)
-            mount "$DEVICE_PATH" "$MOUNT_POINT"
-            chown -R www-data:www-data "$MOUNT_POINT"
-            ;;
-        *)
-            mount "$DEVICE_PATH" "$MOUNT_POINT"
-            ;;
-    esac
-
-    if [ $? -eq 0 ]; then
-        log "SUCCESS: Mounted $DEVICE_NAME ($FSTYPE) to $MOUNT_POINT"
-
-        # Notify Laravel application
-        curl -s -X POST "$API_URL" \
-             -H "Content-Type: application/json" \
-             -d "{\"device\":\"$DEVICE_NAME\", \"status\":\"mounted\", \"mount_point\":\"$MOUNT_POINT\"}" \
-             --max-time 5 > /dev/null 2>&1 &
-    else
-        log "ERROR: Failed to mount $DEVICE_NAME"
-        rmdir "$MOUNT_POINT" 2>/dev/null
-    fi
-
-elif [ "$ACTION" == "remove" ]; then
-    # Unmount and cleanup
-    umount -l "$MOUNT_POINT" 2>/dev/null
-    rmdir "$MOUNT_POINT" 2>/dev/null
-    log "SUCCESS: Unmounted $DEVICE_NAME"
-
-    # Notify Laravel application
-    curl -s -X POST "$API_URL" \
-         -H "Content-Type: application/json" \
-         -d "{\"device\":\"$DEVICE_NAME\", \"status\":\"removed\"}" \
-         --max-time 5 > /dev/null 2>&1 &
-fi
-```
-
-#### 6.7.7 Set Permissions and Reload Rules
-
-```bash
-# Set execute permission
-sudo chmod +x /usr/local/bin/usb-manager.sh
-
-# Create log file with proper permissions
-sudo touch /var/log/usb-manager.log
-sudo chown pisoprint:www-data /var/log/usb-manager.log
-sudo chmod 664 /var/log/usb-manager.log
-
-# Reload udev rules
-sudo udevadm control --reload-rules
-sudo udevadm trigger
-```
-
-#### 6.7.8 Test USB Detection
-
-```bash
-# Insert a USB flash drive and check:
-
-# 1. Check if device is detected
-lsblk
-
-# 2. Check mount point
-ls -la /mnt/usb/
-
-# 3. Check log file
-tail -f /var/log/usb-manager.log
-
-# 4. Manually test the script
-sudo /usr/local/bin/usb-manager.sh add sda1
-ls -la /mnt/usb/sda1/
-
-# 5. Check Laravel detected the USB
-curl http://localhost/api/kiosk/usb/check-status
-```
-
-#### 6.7.9 Update Environment Configuration
-
-Make sure `.env` has the correct USB mount point:
-
-```bash
-# In /var/www/piso-print/.env
-USB_MOUNT_POINT=/mnt/usb
-```
+**✅ Step 11 Complete**
 
 ---
 
-## 7. Web Server Configuration (Nginx)
+## Step 12: Configure Nginx for Laravel
 
-### 7.1 Create Nginx Site Configuration
+### 12.1 Create Nginx Site Configuration
 
 ```bash
 sudo nano /etc/nginx/sites-available/piso-print
 ```
 
-Add the following configuration:
+Paste the following configuration:
 
 ```nginx
 server {
@@ -671,8 +831,6 @@ server {
         fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
         fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
         include fastcgi_params;
-
-        # Increase timeouts for long operations
         fastcgi_read_timeout 300;
         fastcgi_send_timeout 300;
     }
@@ -690,37 +848,43 @@ server {
 }
 ```
 
-### 7.2 Enable Site and Restart Nginx
+Save and exit: `Ctrl+X`, then `Y`, then `Enter`
+
+### 12.2 Enable the Site
 
 ```bash
-# Enable site
 sudo ln -s /etc/nginx/sites-available/piso-print /etc/nginx/sites-enabled/
-
-# Remove default site
-sudo rm /etc/nginx/sites-enabled/default
-
-# Test configuration
-sudo nginx -t
-
-# Restart Nginx
-sudo systemctl restart nginx
-sudo systemctl enable nginx
 ```
 
-### 7.3 Configure PHP-FPM
+### 12.3 Remove Default Site
 
 ```bash
-# Edit PHP-FPM pool configuration
+sudo rm /etc/nginx/sites-enabled/default
+```
+
+### 12.4 Test Nginx Configuration
+
+```bash
+sudo nginx -t
+```
+
+**Expected**: `syntax is ok` and `test is successful`
+
+### 12.5 Restart Nginx
+
+```bash
+sudo systemctl restart nginx
+```
+
+### 12.6 Configure PHP-FPM (Optional Performance Tuning)
+
+```bash
 sudo nano /etc/php/8.3/fpm/pool.d/www.conf
 ```
 
-Update these settings:
+Find and update these values:
 
 ```ini
-user = www-data
-group = www-data
-
-; Increase process limits for better performance
 pm = dynamic
 pm.max_children = 10
 pm.start_servers = 3
@@ -729,107 +893,218 @@ pm.max_spare_servers = 5
 pm.max_requests = 500
 ```
 
+Save and exit.
+
+### 12.7 Restart PHP-FPM
+
 ```bash
-# Restart PHP-FPM
 sudo systemctl restart php8.3-fpm
-sudo systemctl enable php8.3-fpm
 ```
+
+### 12.8 Verify Application
+
+```bash
+curl -I http://localhost
+```
+
+**Expected**: `HTTP/1.1 200 OK`
+
+Open in browser: `http://<raspberry_pi_ip>`
+
+You should see the **Piso Print** application.
+
+- [ ] Nginx configured
+- [ ] Site enabled
+- [ ] Configuration test passed
+- [ ] Application accessible in browser
+
+**✅ Step 12 Complete**
 
 ---
 
-## 8. ESP32 Coin Acceptor Integration
+## Step 13: Setup USB Auto-Detection
 
-### 8.1 Flash ESP32 Firmware
-
-1. Connect ESP32 to your development computer via USB
-2. Install PlatformIO IDE or Arduino IDE
-3. Open `/esp32-firmware/piso-print-coin-acceptor/` project
-4. Update WiFi credentials if needed
-5. Upload firmware to ESP32
-
-### 8.2 Wire ESP32 to Raspberry Pi
-
-```
-ESP32 Pin     →    Raspberry Pi Pin
-─────────────────────────────────────
-GPIO 17 (TX)  →    GPIO 15 (RXD0) - Pin 10
-GPIO 16 (RX)  →    GPIO 14 (TXD0) - Pin 8
-GND           →    GND - Pin 6
-5V            →    External 5V (not from Pi)
-```
-
-### 8.3 Wire Coin Acceptor to ESP32
-
-```
-Coin Acceptor     →    ESP32
-─────────────────────────────
-+12V (Red)        →    External 12V Power
-GND (Black)       →    GND (shared with Pi)
-COIN (White)      →    GPIO 25
-```
-
-### 8.4 Configure Serial Port
+### 13.1 Create USB Mount Directory
 
 ```bash
-# Enable UART on Raspberry Pi
-sudo raspi-config
-# Interface Options > Serial Port
-# Login shell over serial: NO
-# Serial port hardware: YES
-
-# Disable Bluetooth (uses same UART)
-echo "dtoverlay=disable-bt" | sudo tee -a /boot/config.txt
-
-# Set permissions
-sudo chmod 666 /dev/ttyUSB0
-sudo chmod 666 /dev/serial0
-
-# Reboot
-sudo reboot
+sudo mkdir -p /mnt/usb
 ```
-
-### 8.5 Install Python Coin Listener
 
 ```bash
-# Install Python dependencies
-cd /var/www/piso-print/scripts
-pip3 install -r requirements.txt
-
-# Test coin listener
-python3 coin_listener.py --port /dev/ttyUSB0
+sudo chown pisoprint:www-data /mnt/usb
 ```
+
+```bash
+sudo chmod 775 /mnt/usb
+```
+
+### 13.2 Install USB Support Packages
+
+```bash
+sudo apt install -y udisks2 ntfs-3g exfat-fuse exfat-utils
+```
+
+### 13.3 Create USB Manager Script
+
+```bash
+sudo nano /usr/local/bin/usb-manager.sh
+```
+
+Paste the following:
+
+```bash
+#!/bin/bash
+
+MOUNT_ROOT="/mnt/usb"
+API_URL="http://127.0.0.1/api/kiosk/usb/detected"
+LOG_FILE="/var/log/usb-manager.log"
+WEB_UID=$(id -u www-data)
+WEB_GID=$(id -g www-data)
+
+ACTION=$1
+DEVICE_NAME=$2
+
+DEVICE_PATH="/dev/$DEVICE_NAME"
+MOUNT_POINT="$MOUNT_ROOT/$DEVICE_NAME"
+
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
+}
+
+if [ "$ACTION" == "add" ]; then
+    sleep 2
+    mkdir -p "$MOUNT_POINT"
+    FSTYPE=$(blkid -o value -s TYPE "$DEVICE_PATH" 2>/dev/null)
+
+    case "$FSTYPE" in
+        vfat|fat32|fat16)
+            mount -t vfat -o uid=$WEB_UID,gid=$WEB_GID,umask=0022,utf8 "$DEVICE_PATH" "$MOUNT_POINT"
+            ;;
+        ntfs)
+            mount -t ntfs-3g -o uid=$WEB_UID,gid=$WEB_GID,umask=0022 "$DEVICE_PATH" "$MOUNT_POINT"
+            ;;
+        exfat)
+            mount -t exfat -o uid=$WEB_UID,gid=$WEB_GID,umask=0022 "$DEVICE_PATH" "$MOUNT_POINT"
+            ;;
+        *)
+            mount "$DEVICE_PATH" "$MOUNT_POINT"
+            ;;
+    esac
+
+    if [ $? -eq 0 ]; then
+        log "SUCCESS: Mounted $DEVICE_NAME ($FSTYPE) to $MOUNT_POINT"
+        curl -s -X POST "$API_URL" -H "Content-Type: application/json" \
+             -d "{\"device\":\"$DEVICE_NAME\", \"status\":\"mounted\", \"mount_point\":\"$MOUNT_POINT\"}" \
+             --max-time 5 > /dev/null 2>&1 &
+    else
+        log "ERROR: Failed to mount $DEVICE_NAME"
+        rmdir "$MOUNT_POINT" 2>/dev/null
+    fi
+
+elif [ "$ACTION" == "remove" ]; then
+    umount -l "$MOUNT_POINT" 2>/dev/null
+    rmdir "$MOUNT_POINT" 2>/dev/null
+    log "SUCCESS: Unmounted $DEVICE_NAME"
+    curl -s -X POST "$API_URL" -H "Content-Type: application/json" \
+         -d "{\"device\":\"$DEVICE_NAME\", \"status\":\"removed\"}" \
+         --max-time 5 > /dev/null 2>&1 &
+fi
+```
+
+Save and exit.
+
+### 13.4 Make Script Executable
+
+```bash
+sudo chmod +x /usr/local/bin/usb-manager.sh
+```
+
+### 13.5 Create Log File
+
+```bash
+sudo touch /var/log/usb-manager.log
+```
+
+```bash
+sudo chown pisoprint:www-data /var/log/usb-manager.log
+```
+
+```bash
+sudo chmod 664 /var/log/usb-manager.log
+```
+
+### 13.6 Create Udev Rules
+
+```bash
+sudo nano /etc/udev/rules.d/99-usb-automount.rules
+```
+
+Paste:
+
+```udev
+ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_TYPE}!="", ENV{ID_BUS}=="usb", RUN+="/usr/local/bin/usb-manager.sh add %k"
+ACTION=="remove", SUBSYSTEM=="block", ENV{ID_BUS}=="usb", RUN+="/usr/local/bin/usb-manager.sh remove %k"
+```
+
+Save and exit.
+
+### 13.7 Reload Udev Rules
+
+```bash
+sudo udevadm control --reload-rules
+```
+
+```bash
+sudo udevadm trigger
+```
+
+### 13.8 Test USB Detection
+
+1. Insert a USB flash drive
+2. Check if mounted:
+
+```bash
+lsblk
+```
+
+```bash
+ls -la /mnt/usb/
+```
+
+```bash
+tail /var/log/usb-manager.log
+```
+
+- [ ] USB mount directory created
+- [ ] USB manager script created
+- [ ] Udev rules configured
+- [ ] USB detection working
+
+**✅ Step 13 Complete**
 
 ---
 
-## 9. WiFi Hotspot Configuration
+## Step 14: Install WiFi Hotspot (hostapd)
 
-### 9.1 Install Required Packages
+### 14.1 Install hostapd
 
 ```bash
-sudo apt install -y hostapd dnsmasq iptables-persistent rfkill
+sudo apt install -y hostapd
 ```
 
-### 9.2 Run Setup Script
+### 14.2 Stop hostapd (for configuration)
 
 ```bash
-cd /var/www/piso-print/scripts
-sudo bash wifi-manager.sh setup
-```
-
-Or configure manually:
-
-### 9.3 Manual WiFi Hotspot Configuration
-
-```bash
-# Stop services
 sudo systemctl stop hostapd
-sudo systemctl stop dnsmasq
+```
 
-# Configure static IP for wlan0
+### 14.3 Configure Static IP for wlan0
+
+```bash
 sudo nano /etc/dhcpcd.conf
 ```
 
-Add:
+Add at the end of the file:
 
 ```conf
 interface wlan0
@@ -837,29 +1112,15 @@ interface wlan0
     nohook wpa_supplicant
 ```
 
-```bash
-# Configure dnsmasq
-sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.orig
-sudo nano /etc/dnsmasq.conf
-```
+Save and exit.
 
-Add:
-
-```conf
-interface=wlan0
-dhcp-range=192.168.4.100,192.168.4.200,255.255.255.0,24h
-domain=wlan
-address=/pisoprinting.connect/192.168.4.1
-server=8.8.8.8
-server=8.8.4.4
-```
+### 14.4 Create hostapd Configuration
 
 ```bash
-# Configure hostapd
 sudo nano /etc/hostapd/hostapd.conf
 ```
 
-Add:
+Paste:
 
 ```conf
 interface=wlan0
@@ -879,98 +1140,298 @@ rsn_pairwise=CCMP
 country_code=PH
 ```
 
+Save and exit.
+
+### 14.5 Point hostapd to Configuration
+
 ```bash
-# Point hostapd to config file
 sudo nano /etc/default/hostapd
-# Set: DAEMON_CONF="/etc/hostapd/hostapd.conf"
+```
 
-# Unmask and enable services
+Find and update:
+
+```conf
+DAEMON_CONF="/etc/hostapd/hostapd.conf"
+```
+
+Save and exit.
+
+### 14.6 Unmask and Enable hostapd
+
+```bash
 sudo systemctl unmask hostapd
-sudo systemctl enable hostapd
-sudo systemctl enable dnsmasq
+```
 
-# Restart services
+```bash
+sudo systemctl enable hostapd
+```
+
+### 14.7 Verify (Don't Start Yet)
+
+We'll start hostapd after configuring dnsmasq in the next step.
+
+- [ ] hostapd installed
+- [ ] Static IP configured
+- [ ] hostapd configuration created
+- [ ] hostapd enabled
+
+**✅ Step 14 Complete**
+
+---
+
+## Step 15: Configure DNS (dnsmasq)
+
+### 15.1 Install dnsmasq
+
+```bash
+sudo apt install -y dnsmasq
+```
+
+### 15.2 Stop dnsmasq (for configuration)
+
+```bash
+sudo systemctl stop dnsmasq
+```
+
+### 15.3 Backup Original Configuration
+
+```bash
+sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.orig
+```
+
+### 15.4 Create New Configuration
+
+```bash
+sudo nano /etc/dnsmasq.conf
+```
+
+Paste:
+
+```conf
+interface=wlan0
+dhcp-range=192.168.4.100,192.168.4.200,255.255.255.0,24h
+domain=wlan
+address=/pisoprinting.connect/192.168.4.1
+server=8.8.8.8
+server=8.8.4.4
+```
+
+Save and exit.
+
+### 15.5 Enable dnsmasq
+
+```bash
+sudo systemctl enable dnsmasq
+```
+
+### 15.6 Unblock WiFi (if blocked)
+
+```bash
+sudo rfkill unblock wifi
+```
+
+### 15.7 Restart Services
+
+```bash
 sudo systemctl restart dhcpcd
+```
+
+```bash
 sudo systemctl start hostapd
+```
+
+```bash
 sudo systemctl start dnsmasq
 ```
 
-### 9.4 Setup mDNS (pisoprinting.connect)
+### 15.8 Verify WiFi Hotspot
+
+```bash
+sudo systemctl status hostapd
+```
+
+**Expected**: Active (running)
+
+```bash
+sudo systemctl status dnsmasq
+```
+
+**Expected**: Active (running)
+
+### 15.9 Test WiFi Connection
+
+From your phone or laptop:
+
+1. Scan for WiFi networks
+2. Connect to **"PisoPrint_Kiosk"**
+3. Enter password: **PisoPrint2025**
+4. Open browser: `http://192.168.4.1`
+
+- [ ] dnsmasq installed
+- [ ] dnsmasq configured
+- [ ] hostapd running
+- [ ] dnsmasq running
+- [ ] Can connect to WiFi hotspot
+- [ ] Can access web app via hotspot
+
+**✅ Step 15 Complete**
+
+---
+
+## Step 16: Setup mDNS (Avahi)
+
+### 16.1 Install Avahi
+
+```bash
+sudo apt install -y avahi-daemon avahi-utils
+```
+
+### 16.2 Start and Enable Avahi
+
+```bash
+sudo systemctl start avahi-daemon
+```
+
+```bash
+sudo systemctl enable avahi-daemon
+```
+
+### 16.3 Create Custom Service File
+
+```bash
+sudo nano /etc/avahi/services/pisoprint.service
+```
+
+Paste:
+
+```xml
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+  <name>Piso Print Kiosk</name>
+  <service>
+    <type>_http._tcp</type>
+    <port>80</port>
+    <txt-record>path=/</txt-record>
+  </service>
+</service-group>
+```
+
+Save and exit.
+
+### 16.4 Restart Avahi
+
+```bash
+sudo systemctl restart avahi-daemon
+```
+
+### 16.5 Verify mDNS
+
+```bash
+avahi-browse -a -t
+```
+
+**Expected**: Shows Piso Print Kiosk service
+
+### 16.6 Test Domain Access
+
+From a connected device, open browser:
+
+- `http://pisoprinting.connect`
+
+- [ ] Avahi installed
+- [ ] Avahi running
+- [ ] mDNS service configured
+- [ ] Domain accessible
+
+**✅ Step 16 Complete**
+
+---
+
+## Step 17: Setup ESP32 Coin Acceptor
+
+### 17.1 Install Python Dependencies
+
+```bash
+sudo apt install -y python3 python3-pip python3-serial python3-requests
+```
+
+### 17.2 Install pip Packages
 
 ```bash
 cd /var/www/piso-print/scripts
-sudo bash mdns-setup.sh
 ```
+
+```bash
+pip3 install -r requirements.txt --break-system-packages
+```
+
+### 17.3 Configure Serial Port
+
+Ensure UART is enabled (done in Step 2 via raspi-config).
+
+### 17.4 Set Serial Port Permissions
+
+```bash
+sudo chmod 666 /dev/ttyUSB0
+```
+
+(Note: The device may be `/dev/ttyUSB0` or `/dev/ttyACM0` depending on your ESP32)
+
+### 17.5 Wire ESP32 to Raspberry Pi
+
+| ESP32 Pin    | Raspberry Pi Pin          |
+| ------------ | ------------------------- |
+| GPIO 17 (TX) | GPIO 15 (RXD0) - Pin 10   |
+| GPIO 16 (RX) | GPIO 14 (TXD0) - Pin 8    |
+| GND          | GND - Pin 6               |
+| 5V           | External 5V (not from Pi) |
+
+### 17.6 Wire Coin Acceptor to ESP32
+
+| Coin Acceptor | ESP32              |
+| ------------- | ------------------ |
+| +12V (Red)    | External 12V Power |
+| GND (Black)   | GND (shared)       |
+| COIN (White)  | GPIO 25            |
+
+### 17.7 Flash ESP32 Firmware
+
+On your development computer:
+
+1. Open PlatformIO or Arduino IDE
+2. Open `/esp32-firmware/piso-print-coin-acceptor/` project
+3. Upload firmware to ESP32
+
+### 17.8 Test Coin Listener
+
+```bash
+python3 /var/www/piso-print/scripts/coin_listener.py --port /dev/ttyUSB0
+```
+
+Insert a coin and verify it's detected.
+
+Press `Ctrl+C` to stop.
+
+- [ ] Python dependencies installed
+- [ ] ESP32 wired to Pi
+- [ ] Coin acceptor wired to ESP32
+- [ ] ESP32 firmware flashed
+- [ ] Coin detection working
+
+**✅ Step 17 Complete**
 
 ---
 
-## 10. Kiosk Mode Setup
+## Step 18: Configure Systemd Services
 
-### 10.1 Create Kiosk Startup Script
-
-```bash
-# Copy kiosk script
-sudo cp /var/www/piso-print/start-kiosk.sh /home/pisoprint/start-kiosk.sh
-sudo chmod +x /home/pisoprint/start-kiosk.sh
-sudo chown pisoprint:pisoprint /home/pisoprint/start-kiosk.sh
-```
-
-### 10.2 Configure Autostart
-
-```bash
-# Create autostart directory
-mkdir -p /home/pisoprint/.config/autostart
-
-# Create desktop entry for autostart
-cat > /home/pisoprint/.config/autostart/piso-print-kiosk.desktop << EOF
-[Desktop Entry]
-Type=Application
-Name=Piso Print Kiosk
-Exec=/home/pisoprint/start-kiosk.sh
-X-GNOME-Autostart-enabled=true
-Hidden=false
-NoDisplay=false
-EOF
-```
-
-### 10.3 Disable Screen Blanking
-
-```bash
-# Create lightdm config
-sudo mkdir -p /etc/lightdm/lightdm.conf.d
-sudo nano /etc/lightdm/lightdm.conf.d/50-no-screensaver.conf
-```
-
-Add:
-
-```ini
-[Seat:*]
-xserver-command=X -s 0 -dpms
-```
-
-### 10.4 Create Exit Kiosk Script (For Maintenance)
-
-```bash
-cat > /home/pisoprint/exit-kiosk.sh << 'EOF'
-#!/bin/bash
-pkill -f chromium-browser
-pkill -f start-kiosk
-pkill -f unclutter
-echo "Kiosk mode exited. Access desktop now."
-EOF
-
-chmod +x /home/pisoprint/exit-kiosk.sh
-```
-
----
-
-## 11. Systemd Services
-
-### 11.1 Laravel Queue Worker Service
+### 18.1 Create Laravel Queue Worker Service
 
 ```bash
 sudo nano /etc/systemd/system/laravel-queue.service
 ```
+
+Paste:
 
 ```ini
 [Unit]
@@ -990,11 +1451,15 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
-### 11.2 Coin Listener Service
+Save and exit.
+
+### 18.2 Create Coin Listener Service
 
 ```bash
 sudo nano /etc/systemd/system/coin-listener.service
 ```
+
+Paste:
 
 ```ini
 [Unit]
@@ -1015,410 +1480,399 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-### 11.3 Enable All Services
+Save and exit.
+
+### 18.3 Reload Systemd
 
 ```bash
-# Reload systemd
 sudo systemctl daemon-reload
-
-# Enable services
-sudo systemctl enable nginx
-sudo systemctl enable php8.3-fpm
-sudo systemctl enable mariadb
-sudo systemctl enable cups
-sudo systemctl enable laravel-queue
-sudo systemctl enable coin-listener
-sudo systemctl enable hostapd
-sudo systemctl enable dnsmasq
-sudo systemctl enable avahi-daemon
-
-# Start services
-sudo systemctl start nginx
-sudo systemctl start php8.3-fpm
-sudo systemctl start mariadb
-sudo systemctl start cups
-sudo systemctl start laravel-queue
-sudo systemctl start coin-listener
-sudo systemctl start hostapd
-sudo systemctl start dnsmasq
-sudo systemctl start avahi-daemon
 ```
 
-### 11.4 Check Service Status
+### 18.4 Enable All Services
 
 ```bash
-# Check all services
+sudo systemctl enable nginx
+```
+
+```bash
+sudo systemctl enable php8.3-fpm
+```
+
+```bash
+sudo systemctl enable mariadb
+```
+
+```bash
+sudo systemctl enable cups
+```
+
+```bash
+sudo systemctl enable laravel-queue
+```
+
+```bash
+sudo systemctl enable coin-listener
+```
+
+```bash
+sudo systemctl enable hostapd
+```
+
+```bash
+sudo systemctl enable dnsmasq
+```
+
+```bash
+sudo systemctl enable avahi-daemon
+```
+
+### 18.5 Start Services
+
+```bash
+sudo systemctl start laravel-queue
+```
+
+```bash
+sudo systemctl start coin-listener
+```
+
+### 18.6 Verify All Services
+
+```bash
 sudo systemctl status nginx
+```
+
+```bash
 sudo systemctl status php8.3-fpm
+```
+
+```bash
 sudo systemctl status mariadb
+```
+
+```bash
 sudo systemctl status cups
+```
+
+```bash
 sudo systemctl status laravel-queue
+```
+
+```bash
 sudo systemctl status coin-listener
+```
+
+```bash
 sudo systemctl status hostapd
+```
+
+```bash
 sudo systemctl status dnsmasq
 ```
 
+**All services should show**: Active (running)
+
+- [ ] Queue worker service created
+- [ ] Coin listener service created
+- [ ] All services enabled
+- [ ] All services running
+
+**✅ Step 18 Complete**
+
 ---
 
-## 12. Testing & Verification
+## Step 19: Setup Kiosk Mode
 
-### 12.1 Test Web Application
+### 19.1 Install Kiosk Dependencies
 
 ```bash
-# Test from Pi
-curl -I http://localhost
-curl -I http://192.168.4.1
-curl -I http://pisoprinting.connect
+sudo apt install -y chromium-browser unclutter xdotool onboard
 ```
 
-### 12.2 Test Printer
+### 19.2 Copy Kiosk Script
 
 ```bash
-# Check printer status
+sudo cp /var/www/piso-print/start-kiosk.sh /home/pisoprint/start-kiosk.sh
+```
+
+```bash
+sudo chmod +x /home/pisoprint/start-kiosk.sh
+```
+
+```bash
+sudo chown pisoprint:pisoprint /home/pisoprint/start-kiosk.sh
+```
+
+### 19.3 Create Autostart Directory
+
+```bash
+mkdir -p /home/pisoprint/.config/autostart
+```
+
+### 19.4 Create Autostart Entry
+
+```bash
+cat > /home/pisoprint/.config/autostart/piso-print-kiosk.desktop << EOF
+[Desktop Entry]
+Type=Application
+Name=Piso Print Kiosk
+Exec=/home/pisoprint/start-kiosk.sh
+X-GNOME-Autostart-enabled=true
+Hidden=false
+NoDisplay=false
+EOF
+```
+
+### 19.5 Disable Screen Blanking
+
+```bash
+sudo mkdir -p /etc/lightdm/lightdm.conf.d
+```
+
+```bash
+sudo nano /etc/lightdm/lightdm.conf.d/50-no-screensaver.conf
+```
+
+Paste:
+
+```ini
+[Seat:*]
+xserver-command=X -s 0 -dpms
+```
+
+Save and exit.
+
+### 19.6 Create Exit Kiosk Script
+
+```bash
+cat > /home/pisoprint/exit-kiosk.sh << 'EOF'
+#!/bin/bash
+pkill -f chromium-browser
+pkill -f start-kiosk
+pkill -f unclutter
+echo "Kiosk mode exited. Access desktop now."
+EOF
+```
+
+```bash
+chmod +x /home/pisoprint/exit-kiosk.sh
+```
+
+### 19.7 Verify Kiosk Setup
+
+```bash
+ls -la /home/pisoprint/*.sh
+```
+
+```bash
+ls -la /home/pisoprint/.config/autostart/
+```
+
+- [ ] Kiosk dependencies installed
+- [ ] Kiosk script created
+- [ ] Autostart configured
+- [ ] Screen blanking disabled
+- [ ] Exit script created
+
+**✅ Step 19 Complete**
+
+---
+
+## Step 20: Final Testing & Verification
+
+### 20.1 Reboot System
+
+```bash
+sudo reboot
+```
+
+### 20.2 Wait for Kiosk to Start
+
+After reboot, the kiosk mode should automatically launch Chromium in fullscreen.
+
+### 20.3 Test Checklist
+
+#### Web Application
+
+- [ ] Kiosk opens automatically
+- [ ] Application loads correctly
+- [ ] No error messages
+
+#### WiFi Hotspot
+
+- [ ] "PisoPrint_Kiosk" network visible
+- [ ] Can connect with password "PisoPrint2025"
+- [ ] Can access http://192.168.4.1
+- [ ] Can access http://pisoprinting.connect
+
+#### Printer
+
+```bash
 lpstat -p -d
-
-# Print test page
-lp -d Brother_DCP_T720DW_USB /usr/share/cups/data/testprint
-
-# Test from Laravel
-php artisan tinker
->>> App\Services\PrintService::printTestPage();
 ```
 
-### 12.3 Test Coin Acceptor
+- [ ] Printer shows as ready
+- [ ] Test print works:
 
 ```bash
-# Check coin listener logs
+echo "Final Test" | lp -d Brother_DCP_T720DW_USB
+```
+
+#### Coin Acceptor
+
+```bash
 sudo journalctl -u coin-listener -f
-
-# Insert test coin and verify
-# - ESP32 LED should blink
-# - Coin listener should log "Coin ₱X.XX deposited"
-# - Web UI should update balance
 ```
 
-### 12.4 Test WiFi Hotspot
+- [ ] Insert coin - balance updates on screen
 
-From your phone/laptop:
+#### USB Drive
 
-1. Scan for WiFi networks
-2. Connect to `PisoPrint_Kiosk`
-3. Enter password: `PisoPrint2025`
-4. Open browser: `http://192.168.4.1` or `http://pisoprinting.connect`
+- [ ] Insert USB with PDF files
+- [ ] Files appear in application
 
-### 12.5 Test USB Drive Detection
+### 20.4 Service Status Check
 
 ```bash
-# Insert a USB flash drive with PDF files
-
-# 1. Check if device is detected
-lsblk
-# Should show sda1 or similar
-
-# 2. Check if mounted
-ls -la /mnt/usb/
-# Should show sda1 folder
-
-# 3. Check mount log
-tail /var/log/usb-manager.log
-
-# 4. List PDF files on USB
-find /mnt/usb -name "*.pdf" -o -name "*.PDF"
-
-# 5. Test from web browser
-# Navigate to USB upload option in kiosk
-# PDF files from USB should be listed
+sudo systemctl status nginx php8.3-fpm mariadb cups laravel-queue coin-listener hostapd dnsmasq avahi-daemon
 ```
 
-### 12.6 Full System Test
+All should show: **Active (running)**
 
-1. Power on Raspberry Pi
-2. Wait for kiosk mode to launch (Chromium opens automatically)
-3. Connect phone to WiFi hotspot
-4. Upload a PDF file from phone
-5. **OR** Insert USB drive with PDF files
-6. Insert coins to add balance
-7. Select print options
-8. Print document
-9. Verify output quality
+### 20.5 Full Workflow Test
+
+1. ✓ Connect phone to WiFi hotspot
+2. ✓ Open http://pisoprinting.connect
+3. ✓ Upload a PDF file (or insert USB with PDF)
+4. ✓ Insert coins to add balance
+5. ✓ Select print options
+6. ✓ Print document
+7. ✓ Verify printed output
+
+**🎉 Deployment Complete!**
 
 ---
 
-## 13. Troubleshooting
+## Troubleshooting
 
-### 13.1 Web Application Not Loading
+### Web Application Not Loading
 
 ```bash
-# Check Nginx logs
+# Check Nginx
+sudo systemctl status nginx
 sudo tail -f /var/log/nginx/error.log
 
-# Check PHP-FPM logs
+# Check PHP-FPM
+sudo systemctl status php8.3-fpm
 sudo tail -f /var/log/php8.3-fpm.log
 
 # Check Laravel logs
 tail -f /var/www/piso-print/storage/logs/laravel.log
 
-# Test PHP
-php -v
-
-# Clear Laravel cache
+# Clear cache
 cd /var/www/piso-print
 php artisan cache:clear
 php artisan config:clear
-php artisan route:clear
-php artisan view:clear
 ```
 
-### 13.2 Printer Not Working
+### Printer Not Working
 
 ```bash
-# Check CUPS status
+# Check CUPS
 sudo systemctl status cups
 lpstat -p -d
-
-# View CUPS error log
 sudo tail -f /var/log/cups/error_log
-
-# Restart CUPS
-sudo systemctl restart cups
 
 # Check printer connection
 lsusb | grep Brother
+
+# Restart CUPS
+sudo systemctl restart cups
 ```
 
-### 13.3 Coin Acceptor Not Detecting
+### Coin Acceptor Not Detecting
 
 ```bash
 # Check serial port
 ls -la /dev/ttyUSB*
-ls -la /dev/serial*
 
-# Check permissions
+# Set permissions
 sudo chmod 666 /dev/ttyUSB0
 
-# Test serial connection
-python3 -c "import serial; s = serial.Serial('/dev/ttyUSB0', 115200); print('Connected!')"
-
-# Check coin listener service
+# Check service
 sudo journalctl -u coin-listener -f
 
-# Restart coin listener
+# Restart service
 sudo systemctl restart coin-listener
 ```
 
-### 13.4 USB Drive Not Detected
+### WiFi Hotspot Not Working
 
 ```bash
-# Check if USB device is recognized by system
-lsblk
-# Look for devices like sda, sda1, sdb, sdb1
-
-# Check dmesg for USB events
-dmesg | tail -20
-
-# Check if udev rules are loaded
-sudo udevadm info --query=all --name=/dev/sda1
-
-# Test USB manager script manually
-sudo /usr/local/bin/usb-manager.sh add sda1
-ls -la /mnt/usb/sda1/
-
-# Check USB manager log
-tail -f /var/log/usb-manager.log
-
-# Verify mount point permissions
-ls -la /mnt/usb/
-
-# Check if www-data can read USB files
-sudo -u www-data ls -la /mnt/usb/sda1/
-
-# Reload udev rules
-sudo udevadm control --reload-rules
-sudo udevadm trigger
-
-# Check if exfat/ntfs support is installed
-dpkg -l | grep -E 'ntfs|exfat'
-
-# Install missing filesystem support
-sudo apt install -y ntfs-3g exfat-fuse exfat-utils
-```
-
-**Common USB Issues:**
-
-| Issue                     | Solution                                              |
-| ------------------------- | ----------------------------------------------------- |
-| USB not mounting          | Check filesystem type, install ntfs-3g or exfat-fuse  |
-| Permission denied         | Ensure mount uses uid/gid of www-data                 |
-| PDF files not visible     | Check allowed extensions in hardware.php config       |
-| USB detected but no files | Verify mount point in .env (USB_MOUNT_POINT=/mnt/usb) |
-| Slow USB response         | Check USB cable quality, try different USB port       |
-
-### 13.5 WiFi Hotspot Not Broadcasting
-
-```bash
-# Check hostapd status
+# Check services
 sudo systemctl status hostapd
-
-# View hostapd logs
-sudo journalctl -u hostapd -f
-
-# Check wireless interface
-iwconfig wlan0
-ip addr show wlan0
-
-# Restart WiFi services
-sudo systemctl restart dhcpcd
-sudo systemctl restart hostapd
-sudo systemctl restart dnsmasq
+sudo systemctl status dnsmasq
 
 # Unblock WiFi
 sudo rfkill unblock wifi
+
+# Restart services
+sudo systemctl restart dhcpcd hostapd dnsmasq
 ```
 
-### 13.6 Kiosk Not Starting
+### USB Drive Not Detected
 
 ```bash
-# Check display
-echo $DISPLAY
+# Check device
+lsblk
+dmesg | tail -20
 
-# Test Chromium manually
-chromium-browser --kiosk http://localhost
+# Check log
+tail /var/log/usb-manager.log
 
-# Check kiosk script
-cat /home/pisoprint/start-kiosk.sh
-
-# Check autostart
-ls -la /home/pisoprint/.config/autostart/
-
-# View system logs
-journalctl -b | grep -i chromium
-```
-
-### 13.7 Database Connection Issues
-
-```bash
-# Check MySQL status
-sudo systemctl status mariadb
-
-# Test connection
-mysql -u pisoprint -ppisoprint pisoprint -e "SELECT 1;"
-
-# Check Laravel database config
-php artisan tinker
->>> DB::connection()->getPdo();
-
-# Run migrations
-php artisan migrate --force
+# Reload udev
+sudo udevadm control --reload-rules
 ```
 
 ---
 
-## 14. Maintenance & Updates
+## Maintenance & Updates
 
-### 14.1 Regular Maintenance Tasks
+### Weekly Maintenance
 
 ```bash
-# Weekly: Update system packages
+# Update system
 sudo apt update && sudo apt upgrade -y
 
-# Weekly: Clear old logs
+# Clear old logs
 sudo journalctl --vacuum-time=7d
-
-# Weekly: Clear Laravel logs older than 7 days
 find /var/www/piso-print/storage/logs -type f -mtime +7 -delete
-
-# Monthly: Database optimization
-mysql -u pisoprint -ppisoprint pisoprint -e "OPTIMIZE TABLE print_jobs, transactions, users;"
-
-# Check disk space
-df -h
 ```
 
-### 14.2 Application Updates
+### Application Updates
 
 ```bash
 cd /var/www/piso-print
 
 # Backup database
-mysqldump -u pisoprint -ppisoprint pisoprint > /home/pisoprint/backup_$(date +%Y%m%d).sql
+mysqldump -u pisoprint -ppisoprint pisoprint > ~/backup_$(date +%Y%m%d).sql
 
-# Pull latest changes
+# Pull updates
 git pull origin main
 
-# Install dependencies
+# Update dependencies
 composer install --no-dev --optimize-autoloader
-npm ci
-npm run build
+npm ci && npm run build
 
 # Run migrations
 php artisan migrate --force
 
-# Clear and rebuild cache
+# Clear cache
 php artisan optimize:clear
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
 php artisan optimize
 
 # Restart services
-sudo systemctl restart php8.3-fpm
-sudo systemctl restart nginx
-sudo systemctl restart laravel-queue
-```
-
-### 14.3 Backup Script
-
-Create `/home/pisoprint/backup.sh`:
-
-```bash
-#!/bin/bash
-BACKUP_DIR="/home/pisoprint/backups"
-DATE=$(date +%Y%m%d_%H%M%S)
-
-mkdir -p $BACKUP_DIR
-
-# Backup database
-mysqldump -u pisoprint -ppisoprint pisoprint > $BACKUP_DIR/db_$DATE.sql
-
-# Backup .env file
-cp /var/www/piso-print/.env $BACKUP_DIR/env_$DATE
-
-# Backup uploaded files
-tar -czf $BACKUP_DIR/storage_$DATE.tar.gz /var/www/piso-print/storage/app
-
-# Keep only last 7 backups
-find $BACKUP_DIR -type f -mtime +7 -delete
-
-echo "Backup completed: $DATE"
-```
-
-```bash
-chmod +x /home/pisoprint/backup.sh
-
-# Add to cron (daily at 2 AM)
-(crontab -l 2>/dev/null; echo "0 2 * * * /home/pisoprint/backup.sh") | crontab -
-```
-
-### 14.4 Monitoring Commands
-
-```bash
-# System resources
-htop
-
-# Disk usage
-df -h
-
-# Memory usage
-free -h
-
-# Network connections
-netstat -tulpn
-
-# Laravel logs
-tail -f /var/www/piso-print/storage/logs/laravel.log
-
-# All service status
-sudo systemctl list-units --type=service --state=running | grep -E 'nginx|php|mysql|cups|coin|queue|hostapd|dnsmasq'
+sudo systemctl restart php8.3-fpm nginx laravel-queue
 ```
 
 ---
@@ -1427,25 +1881,25 @@ sudo systemctl list-units --type=service --state=running | grep -E 'nginx|php|my
 
 ### Important Paths
 
-| Path                                    | Description                |
-| --------------------------------------- | -------------------------- |
-| `/var/www/piso-print`                   | Application root           |
-| `/var/www/piso-print/.env`              | Environment configuration  |
-| `/var/www/piso-print/storage/logs`      | Application logs           |
-| `/etc/nginx/sites-available/piso-print` | Nginx configuration        |
-| `/etc/hostapd/hostapd.conf`             | WiFi hotspot configuration |
-| `/home/pisoprint/start-kiosk.sh`        | Kiosk startup script       |
+| Path                                    | Description        |
+| --------------------------------------- | ------------------ |
+| `/var/www/piso-print`                   | Application root   |
+| `/var/www/piso-print/.env`              | Environment config |
+| `/var/www/piso-print/storage/logs`      | Laravel logs       |
+| `/etc/nginx/sites-available/piso-print` | Nginx config       |
+| `/etc/hostapd/hostapd.conf`             | WiFi config        |
+| `/home/pisoprint/start-kiosk.sh`        | Kiosk script       |
+| `/mnt/usb`                              | USB mount point    |
 
 ### Important Commands
 
-| Command                         | Description             |
-| ------------------------------- | ----------------------- |
-| `php artisan migrate`           | Run database migrations |
-| `php artisan optimize`          | Cache configuration     |
-| `php artisan queue:work`        | Process queue jobs      |
-| `lpstat -p -d`                  | Check printer status    |
-| `sudo systemctl restart nginx`  | Restart web server      |
-| `/home/pisoprint/exit-kiosk.sh` | Exit kiosk mode         |
+| Command                         | Description        |
+| ------------------------------- | ------------------ |
+| `php artisan migrate`           | Run migrations     |
+| `php artisan optimize`          | Cache config       |
+| `lpstat -p -d`                  | Check printer      |
+| `sudo systemctl restart nginx`  | Restart web server |
+| `/home/pisoprint/exit-kiosk.sh` | Exit kiosk mode    |
 
 ### Default Credentials
 
@@ -1469,13 +1923,11 @@ sudo systemctl list-units --type=service --state=running | grep -E 'nginx|php|my
 
 ## Support
 
-For issues and questions:
-
 - **GitHub Issues**: https://github.com/hisangge/pisoprint/issues
 - **Email**: leodyversemilla07@gmail.com
 
 ---
 
-**Document Version**: 1.0  
+**Document Version**: 2.0  
 **Last Updated**: December 2025  
 **© 2025 Piso Print System. All rights reserved.**
