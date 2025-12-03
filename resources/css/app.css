@@ -227,3 +227,37 @@
         border-color: oklch(0.488 0.243 264.376);
     }
 }
+
+/* Touch scrolling support for kiosk mode */
+html,
+body {
+    touch-action: pan-y pan-x;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+/* Enable smooth touch scrolling on scrollable elements */
+.overflow-auto,
+.overflow-y-auto,
+.overflow-x-auto,
+.overflow-scroll,
+.overflow-y-scroll,
+.overflow-x-scroll,
+[class*='overflow-'] {
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y pan-x;
+}
+
+/* Ensure main content areas are scrollable */
+main,
+.main-content,
+[role='main'] {
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+}
+
+/* Fix for min-h-screen containers */
+.min-h-screen {
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+}

@@ -41,13 +41,14 @@
 
 | Component         | Specification                                       | ✓   |
 | ----------------- | --------------------------------------------------- | --- |
-| **Raspberry Pi**  | Raspberry Pi 4 (4GB/8GB RAM recommended)            | ☐   |
+| **Raspberry Pi**  | Raspberry Pi 4/5 (4GB/8GB RAM recommended)          | ☐   |
 | **Storage**       | 32GB+ Class 10 microSD card                         | ☐   |
 | **Display**       | LAFVIN 7" Touchscreen IPS DSI Display (800×480)     | ☐   |
 | **ESP32**         | ESP32 Development Board (CH340C, USB-C, 30-Pin)     | ☐   |
 | **Coin Acceptor** | ALLAN Universal Coinslot 1239 PROMAX Multi-Coin     | ☐   |
 | **Printer**       | Brother DCP-T720DW (or any CUPS-compatible printer) | ☐   |
 | **Power**         | 5V 3A USB-C for Pi, 12V 2A for Coin Acceptor        | ☐   |
+| **Dev Machine**   | Windows/Mac/Linux PC for building frontend assets   | ☐   |
 
 ### Software to be Installed (in order)
 
@@ -65,6 +66,7 @@
 | 10  | hostapd         | WiFi hotspot              |
 | 11  | dnsmasq         | DNS/DHCP server           |
 | 12  | Avahi           | mDNS (local domain)       |
+| 13  | Emoji Fonts     | Color emoji rendering     |
 
 ---
 
@@ -384,8 +386,10 @@ sudo systemctl enable mariadb
 
 ### 8.3 Secure Installation
 
+> **Note**: On Debian Bookworm and MariaDB 10.5+, the command is `mariadb-secure-installation`. The old `mysql_secure_installation` command may not exist.
+
 ```bash
-sudo mysql_secure_installation
+sudo mariadb-secure-installation
 ```
 
 **Follow the prompts:**
@@ -400,6 +404,8 @@ sudo mysql_secure_installation
 | Disallow root login remotely         | Y                   |
 | Remove test database                 | Y                   |
 | Reload privilege tables              | Y                   |
+
+> **Alternative**: From MariaDB 10.4+, Unix socket authentication is used by default, so you can skip this step and proceed directly to creating the database and user. The root user will authenticate via the socket (sudo) without a password.
 
 ### 8.4 Create Database and User
 
@@ -450,13 +456,23 @@ mysql -u pisoprint -ppisoprint -e "SHOW DATABASES;"
 
 ## Step 9: Install CUPS Printing System
 
-### 9.1 Install CUPS
+> **Note**: CUPS is often pre-installed on Raspberry Pi OS Desktop. Check if it's already running before installing.
+
+### 9.1 Check if CUPS is Already Installed
+
+```bash
+sudo systemctl status cups
+```
+
+If you see `Active: active (running)`, CUPS is already installed. Skip to **Step 9.4**.
+
+### 9.2 Install CUPS (if not pre-installed)
 
 ```bash
 sudo apt install -y cups
 ```
 
-### 9.2 Install Additional CUPS Packages
+### 9.3 Install Additional CUPS Packages
 
 ```bash
 sudo apt install -y cups-bsd cups-client
@@ -525,9 +541,69 @@ You should see the **CUPS Administration** page.
 
 ## Step 10: Install Printer Drivers
 
-> **Note**: This step is for Brother DCP-T720DW. Skip if using a different printer.
+> **Note**: Many printers, including Brother DCP-T720DW, are supported out-of-the-box by CUPS on Raspberry Pi OS. Try adding your printer first via the CUPS web interface before manually installing drivers.
 
-### 10.1 Download Brother Drivers
+### 10.1 Connect Printer via USB
+
+1. Connect your Brother printer to Raspberry Pi via USB cable
+2. Power on the printer
+
+### 10.2 Check if Printer is Detected
+
+```bash
+lsusb | grep -i brother
+```
+
+**Expected**: You should see your Brother printer listed.
+
+```bash
+lpinfo -v | grep usb
+```
+
+**Expected**: Shows USB printer device path.
+
+### 10.3 Add Printer via CUPS Web Interface
+
+1. Open browser: `http://<raspberry_pi_ip>:631`
+2. Go to **Administration** tab
+3. Click **Add Printer**
+4. Login with: `pisoprint` / `pisoprint`
+5. Select your USB printer: **"Brother DCP-T720DW"**
+6. Click **Continue**
+7. Set Name: `Brother_DCP_T720DW_USB`
+8. Check **"Share This Printer"**
+9. Click **Continue**
+10. Select the appropriate driver (CUPS usually auto-detects)
+11. Click **Add Printer**
+12. Set default options and click **Set Default Options**
+
+### 10.4 Set as Default Printer
+
+```bash
+sudo lpadmin -d Brother_DCP_T720DW_USB
+```
+
+### 10.5 Verify Printer
+
+```bash
+lpstat -p -d
+```
+
+**Expected**: Shows printer status and default printer
+
+### 10.6 Test Print
+
+```bash
+echo "Test Print from Piso Print Kiosk" | lp -d Brother_DCP_T720DW_USB
+```
+
+**Expected**: Printer prints the test message
+
+### 10.7 Manual Driver Installation (Only if needed)
+
+> Skip this section if the printer works without manual driver installation.
+
+If CUPS doesn't detect your printer or you experience issues, install the Brother drivers manually:
 
 ```bash
 cd /tmp
@@ -541,19 +617,13 @@ wget https://download.brother.com/welcome/dlf105450/brcupsconfig5.tar.gz
 wget https://download.brother.com/welcome/dlf101775/dcpt720dwpdrv-2.0.1-1.armhf.deb
 ```
 
-### 10.2 Install Driver Package
-
 ```bash
 sudo dpkg -i dcpt720dwpdrv-2.0.1-1.armhf.deb
 ```
 
-### 10.3 Fix Dependencies (if needed)
-
 ```bash
 sudo apt --fix-broken install -y
 ```
-
-### 10.4 Configure Brother Driver
 
 ```bash
 tar -xvzf brcupsconfig5.tar.gz
@@ -563,50 +633,10 @@ tar -xvzf brcupsconfig5.tar.gz
 sudo ./brcupsconfig5/brcupsconfig5
 ```
 
-### 10.5 Connect Printer via USB
+After installing drivers, repeat Steps 10.3-10.6.
 
-1. Connect your Brother printer to Raspberry Pi via USB cable
-2. Power on the printer
-
-### 10.6 Add Printer via CUPS Web Interface
-
-1. Open browser: `http://<raspberry_pi_ip>:631`
-2. Go to **Administration** tab
-3. Click **Add Printer**
-4. Login with: `pisoprint` / `pisoprint`
-5. Select your USB printer: **"Brother DCP-T720DW"**
-6. Click **Continue**
-7. Set Name: `Brother_DCP_T720DW_USB`
-8. Check **"Share This Printer"**
-9. Click **Continue**
-10. Select the appropriate PPD/driver
-11. Click **Add Printer**
-12. Set default options and click **Set Default Options**
-
-### 10.7 Set as Default Printer
-
-```bash
-sudo lpadmin -d Brother_DCP_T720DW_USB
-```
-
-### 10.8 Verify Printer
-
-```bash
-lpstat -p -d
-```
-
-**Expected**: Shows printer status and default printer
-
-### 10.9 Test Print
-
-```bash
-echo "Test Print from Piso Print Kiosk" | lp -d Brother_DCP_T720DW_USB
-```
-
-**Expected**: Printer prints the test message
-
-- [ ] Driver installed
 - [ ] Printer connected
+- [ ] Printer detected by CUPS
 - [ ] Printer added to CUPS
 - [ ] Test print successful
 
@@ -619,11 +649,11 @@ echo "Test Print from Piso Print Kiosk" | lp -d Brother_DCP_T720DW_USB
 ### 11.1 Create Web Directory
 
 ```bash
-sudo mkdir -p /var/www/piso-print
+sudo mkdir -p /var/www/pisoprint
 ```
 
 ```bash
-sudo chown -R pisoprint:www-data /var/www/piso-print
+sudo chown -R pisoprint:www-data /var/www/pisoprint
 ```
 
 ### 11.2 Clone Repository
@@ -633,11 +663,11 @@ cd /var/www
 ```
 
 ```bash
-git clone https://github.com/hisangge/pisoprint.git piso-print
+git clone https://github.com/hisangge/pisoprint.git pisoprint
 ```
 
 ```bash
-cd piso-print
+cd pisoprint
 ```
 
 ### 11.3 Install PHP Dependencies
@@ -658,9 +688,34 @@ npm ci
 
 ### 11.5 Build Frontend Assets
 
+> ⚠️ **CRITICAL**: Due to ARM architecture incompatibility with native binaries (esbuild/rollup), you **cannot build on the Raspberry Pi**. You must build on a development machine and transfer the files.
+
+#### Option A: Build on Development Machine (Recommended)
+
+On your Windows/Mac/Linux development machine:
+
 ```bash
+# Clone and build locally
+git clone https://github.com/hisangge/pisoprint.git
+cd pisoprint
+npm ci
 npm run build
+
+# Transfer build files to Pi via SCP
+scp -r public/build pisoprint@<PI_IP>:/var/www/pisoprint/public/
 ```
+
+#### Option B: If you try `npm run build` on Pi
+
+You will see "Illegal instruction" errors. This is expected - use Option A instead.
+
+#### Verify Build Transfer
+
+```bash
+ls -la /var/www/pisoprint/public/build/
+```
+
+**Expected**: Should contain `manifest.json` and `assets/` folder
 
 ### 11.6 Create Environment File
 
@@ -744,19 +799,27 @@ php artisan optimize
 ### 11.12 Set Permissions
 
 ```bash
-sudo chown -R pisoprint:www-data /var/www/piso-print
+sudo chown -R pisoprint:www-data /var/www/pisoprint
 ```
 
 ```bash
-sudo chmod -R 755 /var/www/piso-print
+sudo chmod -R 755 /var/www/pisoprint
 ```
 
 ```bash
-sudo chmod -R 775 /var/www/piso-print/storage
+sudo chmod -R 775 /var/www/pisoprint/storage
 ```
 
 ```bash
-sudo chmod -R 775 /var/www/piso-print/bootstrap/cache
+sudo chmod -R 775 /var/www/pisoprint/bootstrap/cache
+```
+
+```bash
+sudo chown -R www-data:www-data /var/www/pisoprint/public/build
+```
+
+```bash
+sudo chmod -R 755 /var/www/pisoprint/public/build
 ```
 
 ### 11.13 Grant Serial Port Access
@@ -772,10 +835,16 @@ sudo usermod -a -G dialout pisoprint
 ### 11.14 Verify Application Files
 
 ```bash
-ls -la /var/www/piso-print/
+ls -la /var/www/pisoprint/
 ```
 
 **Expected**: Shows application files including `artisan`, `composer.json`, `public/`, etc.
+
+```bash
+ls -la /var/www/pisoprint/public/build/
+```
+
+**Expected**: Shows `manifest.json` and `assets/` directory (from build transfer)
 
 - [ ] Repository cloned
 - [ ] Composer dependencies installed
@@ -805,7 +874,7 @@ server {
     listen [::]:80;
     server_name pisoprinting.connect 192.168.4.1 localhost;
 
-    root /var/www/piso-print/public;
+    root /var/www/pisoprint/public;
     index index.php index.html;
 
     # Security headers
@@ -901,7 +970,32 @@ Save and exit.
 sudo systemctl restart php8.3-fpm
 ```
 
-### 12.8 Verify Application
+### 12.8 Configure PHP Upload Limits
+
+Create a custom PHP configuration for larger file uploads:
+
+```bash
+sudo nano /etc/php/8.3/fpm/conf.d/99-pisoprint.ini
+```
+
+Paste:
+
+```ini
+; PisoPrint custom settings
+upload_max_filesize = 50M
+post_max_size = 55M
+max_execution_time = 300
+max_input_time = 300
+memory_limit = 256M
+```
+
+Save and exit.
+
+```bash
+sudo systemctl restart php8.3-fpm
+```
+
+### 12.9 Verify Application
 
 ```bash
 curl -I http://localhost
@@ -941,8 +1035,10 @@ sudo chmod 775 /mnt/usb
 ### 13.2 Install USB Support Packages
 
 ```bash
-sudo apt install -y udisks2 ntfs-3g exfat-fuse exfat-utils
+sudo apt install -y udisks2 ntfs-3g exfat-fuse exfatprogs
 ```
+
+> **Note**: On older systems, use `exfat-utils` instead of `exfatprogs`.
 
 ### 13.3 Create USB Manager Script
 
@@ -1359,7 +1455,7 @@ sudo apt install -y python3 python3-pip python3-serial python3-requests
 ### 17.2 Install pip Packages
 
 ```bash
-cd /var/www/piso-print/scripts
+cd /var/www/pisoprint/scripts
 ```
 
 ```bash
@@ -1406,7 +1502,7 @@ On your development computer:
 ### 17.8 Test Coin Listener
 
 ```bash
-python3 /var/www/piso-print/scripts/coin_listener.py --port /dev/ttyUSB0
+python3 /var/www/pisoprint/scripts/coin_listener.py --port /dev/ttyUSB0
 ```
 
 Insert a coin and verify it's detected.
@@ -1442,7 +1538,7 @@ After=network.target mysql.service
 Type=simple
 User=www-data
 Group=www-data
-WorkingDirectory=/var/www/piso-print
+WorkingDirectory=/var/www/pisoprint
 ExecStart=/usr/bin/php artisan queue:work --sleep=3 --tries=3 --max-time=3600
 Restart=always
 RestartSec=5
@@ -1469,7 +1565,7 @@ After=network.target
 [Service]
 Type=simple
 User=pisoprint
-WorkingDirectory=/var/www/piso-print/scripts
+WorkingDirectory=/var/www/pisoprint/scripts
 Environment=ESP32_SERIAL_PORT=/dev/ttyUSB0
 Environment=LARAVEL_URL=http://localhost
 ExecStart=/usr/bin/python3 coin_listener.py
@@ -1586,30 +1682,124 @@ sudo systemctl status dnsmasq
 ### 19.1 Install Kiosk Dependencies
 
 ```bash
-sudo apt install -y chromium-browser unclutter xdotool onboard
+sudo apt install -y chromium-browser unclutter xdotool onboard fonts-noto-color-emoji
 ```
 
-### 19.2 Copy Kiosk Script
+> **Note**: `fonts-noto-color-emoji` is required for emoji rendering in Chromium.
+
+### 19.2 Refresh Font Cache
 
 ```bash
-sudo cp /var/www/piso-print/start-kiosk.sh /home/pisoprint/start-kiosk.sh
+sudo fc-cache -fv
+```
+
+### 19.3 Switch from Wayland to X11 (Important for Touch Scrolling)
+
+> ⚠️ **CRITICAL**: Raspberry Pi OS Bookworm uses Wayland (labwc) by default, which has poor touch scrolling support in Chromium. Switch to X11 for proper touchscreen functionality.
+
+Check current session type:
+
+```bash
+grep -E 'session=|greeter=' /etc/lightdm/lightdm.conf | grep -v '^#'
+```
+
+If you see `rpd-labwc` (Wayland), switch to X11:
+
+```bash
+sudo sed -i 's/autologin-session=rpd-labwc/autologin-session=rpd-x/' /etc/lightdm/lightdm.conf
+sudo sed -i 's/user-session=rpd-labwc/user-session=rpd-x/' /etc/lightdm/lightdm.conf
+sudo sed -i 's/greeter-session=pi-greeter-labwc/greeter-session=pi-greeter/' /etc/lightdm/lightdm.conf
+```
+
+Verify the change:
+
+```bash
+grep -E 'session=|greeter=' /etc/lightdm/lightdm.conf | grep -v '^#'
+```
+
+**Expected output**:
+
+```
+greeter-session=pi-greeter
+user-session=rpd-x
+autologin-session=rpd-x
+```
+
+### 19.4 Create Kiosk Script with Touch Scrolling
+
+```bash
+cat > /home/pisoprint/start-kiosk.sh << 'EOF'
+#!/bin/bash
+
+# Configuration
+KIOSK_URL="http://localhost"
+export DISPLAY=:0
+
+# 1. CLEANUP: Kill any previous instances to prevent duplicates
+pkill -o chromium || true
+pkill -o unclutter || true
+
+# 2. DISPLAY: Disable Screen Sleep & Energy Saving
+xset s off 2>/dev/null || true
+xset -dpms 2>/dev/null || true
+xset s noblank 2>/dev/null || true
+
+# 3. UTILITIES: Start Background Tools
+# Hide the mouse cursor after 0.5 seconds of inactivity
+unclutter -idle 0.5 -root &
+
+# 4. RECOVERY: Clean Chromium Crash State
+rm -rf ~/.config/chromium/Singleton* 2>/dev/null || true
+sed -i 's/"exited_cleanly":false/"exited_cleanly":true/' ~/.config/chromium/Default/Preferences 2>/dev/null || true
+sed -i 's/"exit_type":"Crashed"/"exit_type":"Normal"/' ~/.config/chromium/Default/Preferences 2>/dev/null || true
+
+# 5. NETWORK: Wait for Laravel/Nginx
+until curl -s -o /dev/null "$KIOSK_URL"; do
+  sleep 2
+done
+
+# 6. LAUNCH: Start Chromium with TOUCH SCROLLING enabled
+chromium \
+    --kiosk \
+    --noerrdialogs \
+    --disable-infobars \
+    --check-for-update-interval=31536000 \
+    --window-size=800,480 \
+    --window-position=0,0 \
+    --start-fullscreen \
+    --touch-events=enabled \
+    --enable-features=TouchpadAndWheelScrollLatching,AsyncTouchEvents,OverlayScrollbar \
+    --enable-smooth-scrolling \
+    --disable-pinch \
+    --overscroll-history-navigation=0 \
+    --ignore-gpu-blocklist \
+    --enable-gpu-rasterization \
+    --enable-zero-copy \
+    --disk-cache-dir=/tmp/chromium-cache \
+    --disk-cache-size=52428800 \
+    --user-data-dir=/home/pisoprint/.config/chromium \
+    "$KIOSK_URL" &
+
+# Keep the script running to monitor the browser process
+wait $!
+EOF
 ```
 
 ```bash
-sudo chmod +x /home/pisoprint/start-kiosk.sh
+chmod +x /home/pisoprint/start-kiosk.sh
 ```
 
 ```bash
-sudo chown pisoprint:pisoprint /home/pisoprint/start-kiosk.sh
+chown pisoprint:pisoprint /home/pisoprint/start-kiosk.sh
 ```
 
-### 19.3 Create Autostart Directory
+### 19.5 Create Autostart Directory
 
 ```bash
 mkdir -p /home/pisoprint/.config/autostart
 ```
 
-### 19.4 Create Autostart Entry
+### 19.6 Create Autostart Entry
 
 ```bash
 cat > /home/pisoprint/.config/autostart/piso-print-kiosk.desktop << EOF
@@ -1623,7 +1813,7 @@ NoDisplay=false
 EOF
 ```
 
-### 19.5 Disable Screen Blanking
+### 19.7 Disable Screen Blanking
 
 ```bash
 sudo mkdir -p /etc/lightdm/lightdm.conf.d
@@ -1642,12 +1832,12 @@ xserver-command=X -s 0 -dpms
 
 Save and exit.
 
-### 19.6 Create Exit Kiosk Script
+### 19.8 Create Exit Kiosk Script
 
 ```bash
 cat > /home/pisoprint/exit-kiosk.sh << 'EOF'
 #!/bin/bash
-pkill -f chromium-browser
+pkill -f chromium
 pkill -f start-kiosk
 pkill -f unclutter
 echo "Kiosk mode exited. Access desktop now."
@@ -1658,7 +1848,7 @@ EOF
 chmod +x /home/pisoprint/exit-kiosk.sh
 ```
 
-### 19.7 Verify Kiosk Setup
+### 19.9 Verify Kiosk Setup
 
 ```bash
 ls -la /home/pisoprint/*.sh
@@ -1668,8 +1858,9 @@ ls -la /home/pisoprint/*.sh
 ls -la /home/pisoprint/.config/autostart/
 ```
 
-- [ ] Kiosk dependencies installed
-- [ ] Kiosk script created
+- [ ] Kiosk dependencies installed (including emoji fonts)
+- [ ] Switched from Wayland to X11
+- [ ] Kiosk script created with touch scrolling flags
 - [ ] Autostart configured
 - [ ] Screen blanking disabled
 - [ ] Exit script created
@@ -1731,6 +1922,18 @@ sudo journalctl -u coin-listener -f
 - [ ] Insert USB with PDF files
 - [ ] Files appear in application
 
+#### Mobile Upload (Phone/Tablet)
+
+From a phone connected to the WiFi hotspot:
+
+1. Open browser and go to: `http://pisoprinting.connect/mobile/upload`
+2. Or via mDNS (if on same LAN): `http://pisoprint.local/mobile/upload`
+
+- [ ] Mobile upload page loads with sky-blue theme
+- [ ] Can select and upload a PDF file
+- [ ] Upload success page shows file details
+- [ ] Uploaded file appears on kiosk for printing
+
 ### 20.4 Service Status Check
 
 ```bash
@@ -1742,12 +1945,13 @@ All should show: **Active (running)**
 ### 20.5 Full Workflow Test
 
 1. ✓ Connect phone to WiFi hotspot
-2. ✓ Open http://pisoprinting.connect
-3. ✓ Upload a PDF file (or insert USB with PDF)
-4. ✓ Insert coins to add balance
-5. ✓ Select print options
-6. ✓ Print document
-7. ✓ Verify printed output
+2. ✓ Open http://pisoprinting.connect/mobile/upload on phone
+3. ✓ Upload a PDF file from phone (or insert USB with PDF on kiosk)
+4. ✓ Go to kiosk and select the uploaded file
+5. ✓ Insert coins to add balance
+6. ✓ Select print options
+7. ✓ Print document
+8. ✓ Verify printed output
 
 **🎉 Deployment Complete!**
 
@@ -1767,12 +1971,66 @@ sudo systemctl status php8.3-fpm
 sudo tail -f /var/log/php8.3-fpm.log
 
 # Check Laravel logs
-tail -f /var/www/piso-print/storage/logs/laravel.log
+tail -f /var/www/pisoprint/storage/logs/laravel.log
 
 # Clear cache
-cd /var/www/piso-print
+cd /var/www/pisoprint
 php artisan cache:clear
 php artisan config:clear
+```
+
+### Vite Manifest Not Found Error
+
+This error means the frontend build files are missing or have permission issues:
+
+```bash
+# Check if build exists
+ls -la /var/www/pisoprint/public/build/
+
+# If missing, rebuild on your dev machine and transfer:
+# On dev machine:
+npm run build
+scp -r public/build pisoprint@<PI_IP>:/var/www/pisoprint/public/
+
+# Fix permissions on Pi
+sudo chown -R www-data:www-data /var/www/pisoprint/public/build
+sudo chmod -R 755 /var/www/pisoprint/public/build
+
+# Clear Laravel cache
+cd /var/www/pisoprint
+php artisan optimize:clear
+php artisan config:cache
+```
+
+### Touch Scrolling Not Working
+
+If finger scrolling doesn't work on the touchscreen:
+
+```bash
+# Check if using Wayland (problematic)
+grep -E 'session=' /etc/lightdm/lightdm.conf | grep -v '^#'
+
+# If shows rpd-labwc, switch to X11:
+sudo sed -i 's/autologin-session=rpd-labwc/autologin-session=rpd-x/' /etc/lightdm/lightdm.conf
+sudo sed -i 's/user-session=rpd-labwc/user-session=rpd-x/' /etc/lightdm/lightdm.conf
+sudo sed -i 's/greeter-session=pi-greeter-labwc/greeter-session=pi-greeter/' /etc/lightdm/lightdm.conf
+
+# Reboot required
+sudo reboot
+```
+
+### Emojis Not Rendering
+
+```bash
+# Install emoji fonts
+sudo apt install -y fonts-noto-color-emoji
+
+# Refresh font cache
+sudo fc-cache -fv
+
+# Restart kiosk
+pkill chromium
+DISPLAY=:0 /home/pisoprint/start-kiosk.sh &
 ```
 
 ### Printer Not Working
@@ -1834,6 +2092,18 @@ tail /var/log/usb-manager.log
 sudo udevadm control --reload-rules
 ```
 
+### Kiosk Script Syntax Errors
+
+If the kiosk won't start due to script errors:
+
+```bash
+# Check for syntax errors
+bash -n /home/pisoprint/start-kiosk.sh
+
+# Recreate the script (copy from Step 19.4)
+# Make sure no escape characters are corrupted
+```
+
 ---
 
 ## Maintenance & Updates
@@ -1846,33 +2116,55 @@ sudo apt update && sudo apt upgrade -y
 
 # Clear old logs
 sudo journalctl --vacuum-time=7d
-find /var/www/piso-print/storage/logs -type f -mtime +7 -delete
+find /var/www/pisoprint/storage/logs -type f -mtime +7 -delete
 ```
 
 ### Application Updates
 
-```bash
-cd /var/www/piso-print
+> ⚠️ **IMPORTANT**: You must build on your development machine, not on the Pi.
 
-# Backup database
+```bash
+# On Raspberry Pi - Backup database first
+cd /var/www/pisoprint
 mysqldump -u pisoprint -ppisoprint pisoprint > ~/backup_$(date +%Y%m%d).sql
 
-# Pull updates
+# Pull code updates
 git pull origin main
 
-# Update dependencies
+# Update PHP dependencies
 composer install --no-dev --optimize-autoloader
-npm ci && npm run build
 
 # Run migrations
 php artisan migrate --force
+```
 
-# Clear cache
+**On your development machine:**
+
+```bash
+# Build frontend
+cd pisoprint
+git pull origin main
+npm ci
+npm run build
+
+# Transfer to Pi
+scp -r public/build pisoprint@<PI_IP>:/var/www/pisoprint/public/
+```
+
+**Back on Raspberry Pi:**
+
+```bash
+# Fix permissions and clear cache
+sudo chown -R www-data:www-data /var/www/pisoprint/public/build
 php artisan optimize:clear
 php artisan optimize
 
 # Restart services
 sudo systemctl restart php8.3-fpm nginx laravel-queue
+
+# Restart kiosk
+pkill chromium
+DISPLAY=:0 nohup /home/pisoprint/start-kiosk.sh > /tmp/kiosk.log 2>&1 &
 ```
 
 ---
@@ -1881,25 +2173,28 @@ sudo systemctl restart php8.3-fpm nginx laravel-queue
 
 ### Important Paths
 
-| Path                                    | Description        |
-| --------------------------------------- | ------------------ |
-| `/var/www/piso-print`                   | Application root   |
-| `/var/www/piso-print/.env`              | Environment config |
-| `/var/www/piso-print/storage/logs`      | Laravel logs       |
-| `/etc/nginx/sites-available/piso-print` | Nginx config       |
-| `/etc/hostapd/hostapd.conf`             | WiFi config        |
-| `/home/pisoprint/start-kiosk.sh`        | Kiosk script       |
-| `/mnt/usb`                              | USB mount point    |
+| Path                                       | Description        |
+| ------------------------------------------ | ------------------ |
+| `/var/www/pisoprint`                       | Application root   |
+| `/var/www/pisoprint/.env`                  | Environment config |
+| `/var/www/pisoprint/storage/logs`          | Laravel logs       |
+| `/etc/nginx/sites-available/piso-print`    | Nginx config       |
+| `/etc/hostapd/hostapd.conf`                | WiFi config        |
+| `/home/pisoprint/start-kiosk.sh`           | Kiosk script       |
+| `/mnt/usb`                                 | USB mount point    |
+| `/etc/php/8.3/fpm/conf.d/99-pisoprint.ini` | PHP upload limits  |
 
 ### Important Commands
 
-| Command                         | Description        |
-| ------------------------------- | ------------------ |
-| `php artisan migrate`           | Run migrations     |
-| `php artisan optimize`          | Cache config       |
-| `lpstat -p -d`                  | Check printer      |
-| `sudo systemctl restart nginx`  | Restart web server |
-| `/home/pisoprint/exit-kiosk.sh` | Exit kiosk mode    |
+| Command                                                       | Description       |
+| ------------------------------------------------------------- | ----------------- |
+| `php artisan migrate`                                         | Run migrations    |
+| `php artisan optimize`                                        | Cache config      |
+| `php artisan optimize:clear`                                  | Clear all caches  |
+| `lpstat -p -d`                                                | Check printer     |
+| `sudo systemctl restart nginx php8.3-fpm`                     | Restart web stack |
+| `/home/pisoprint/exit-kiosk.sh`                               | Exit kiosk mode   |
+| `pkill chromium; DISPLAY=:0 /home/pisoprint/start-kiosk.sh &` | Restart kiosk     |
 
 ### Default Credentials
 
@@ -1912,12 +2207,14 @@ sudo systemctl restart php8.3-fpm nginx laravel-queue
 
 ### Network Information
 
-| Service    | Address                                           |
-| ---------- | ------------------------------------------------- |
-| Web App    | http://192.168.4.1 or http://pisoprinting.connect |
-| CUPS Web   | http://localhost:631                              |
-| WiFi SSID  | PisoPrint_Kiosk                                   |
-| Hotspot IP | 192.168.4.1                                       |
+| Service       | Address                                           |
+| ------------- | ------------------------------------------------- |
+| Kiosk App     | http://192.168.4.1 or http://pisoprinting.connect |
+| Mobile Upload | http://pisoprinting.connect/mobile/upload         |
+| mDNS Access   | http://pisoprint.local (requires Avahi/Bonjour)   |
+| CUPS Web      | http://localhost:631                              |
+| WiFi SSID     | PisoPrint_Kiosk                                   |
+| Hotspot IP    | 192.168.4.1                                       |
 
 ---
 
@@ -1928,6 +2225,23 @@ sudo systemctl restart php8.3-fpm nginx laravel-queue
 
 ---
 
-**Document Version**: 2.0  
-**Last Updated**: December 2025  
+**Document Version**: 2.2  
+**Last Updated**: December 3, 2025  
+**Changelog v2.2**:
+
+- Added mobile upload URLs to Network Information section
+- Added mDNS access URL (pisoprint.local) for local network discovery
+- Updated UI: Mobile upload pages now match kiosk sky-blue theme
+
+**Changelog v2.1**:
+
+- Added requirement for development machine (build cannot run on Pi due to ARM incompatibility)
+- Added PHP upload limits configuration (50MB)
+- Added Wayland to X11 switch instructions for proper touch scrolling
+- Added emoji fonts installation (fonts-noto-color-emoji)
+- Updated kiosk script with touch scrolling Chromium flags
+- Added troubleshooting sections for Vite manifest, touch scrolling, emojis
+- Fixed application paths from `/var/www/piso-print` to `/var/www/pisoprint`
+- Updated maintenance section with proper build transfer workflow
+
 **© 2025 Piso Print System. All rights reserved.**

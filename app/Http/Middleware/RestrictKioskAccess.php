@@ -18,14 +18,8 @@ class RestrictKioskAccess
         $clientIp = $request->ip();
         $isLocalhost = in_array($clientIp, ['127.0.0.1', '::1', 'localhost']);
 
-        // Define routes that are allowed from external devices (hotspot)
-        $allowedExternalRoutes = [
-            'mobile.upload',
-            'mobile.upload.store',
-            'health',
-        ];
-
-        // Define routes that are kiosk-only (not accessible from external devices)
+        // Define routes that are KIOSK-ONLY (only accessible from localhost/kiosk)
+        // Everything else is accessible from external devices
         $kioskOnlyRoutes = [
             'kiosk.home',
             'kiosk.upload',
@@ -47,41 +41,20 @@ class RestrictKioskAccess
             'kiosk.api.usb.file-ready',
             'kiosk.api.usb.files',
             'kiosk.upload-from-usb',
-            // Admin routes - only accessible from kiosk/localhost
-            'admin.dashboard',
-            'admin.print-jobs.index',
-            'admin.print-jobs.export',
-            'admin.print-jobs.show',
-            'admin.transactions.index',
-            'admin.transactions.export',
-            'admin.settings.index',
-            'admin.settings.update',
-            // User settings routes
-            'profile.edit',
-            'profile.update',
-            'profile.destroy',
-            'user-password.edit',
-            'user-password.update',
-            'appearance.edit',
-            'two-factor.show',
+            'kiosk.reset',
+            'register', // Disable public registration - admin creates users manually
         ];
 
         $currentRoute = $request->route()?->getName();
 
-        // If accessing from external IP (hotspot)
-        if (! $isLocalhost) {
-            // Only allow specific routes
-            if (! in_array($currentRoute, $allowedExternalRoutes)) {
-                // Return a simple upload-only page for external access
-                return response()->view('errors.external-access-only', [
-                    'message' => 'This kiosk system is only accessible for file uploads from external devices. Please use the kiosk touchscreen for other functions.',
-                    'uploadUrl' => route('mobile.upload'),
-                ], 403);
-            }
+        // If accessing from external IP and trying to access kiosk-only routes
+        if (!$isLocalhost && in_array($currentRoute, $kioskOnlyRoutes)) {
+            // Return a simple upload-only page for external access
+            return response()->view('errors.external-access-only', [
+                'message' => 'This kiosk system is only accessible for file uploads from external devices. Please use the kiosk touchscreen for other functions.',
+                'uploadUrl' => route('mobile.upload'),
+            ], 403);
         }
-
-        // If accessing kiosk-only routes from localhost, allow
-        // If accessing allowed routes from anywhere, allow
 
         return $next($request);
     }

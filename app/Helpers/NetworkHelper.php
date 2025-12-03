@@ -110,15 +110,9 @@ class NetworkHelper
     public static function getWifiHotspotInfo(): array
     {
         $ip = self::getServerIpAddress();
-        // Use configured domain if available (pisoprint.local), otherwise use IP
-        $domain = env('KIOSK_DOMAIN', 'pisoprint.local');
-        $url = 'http://'.$domain;
 
-        // For development or if domain resolution fails, fall back to IP
-        // In production, pisoprint.local should resolve via mDNS/Avahi
-        if (env('APP_ENV') === 'local' || env('KIOSK_DOMAIN') === false) {
-            $url = 'http://'.$ip;
-        }
+        // Use pisoprint.local (mDNS via Avahi) - works on iOS and most devices
+        $url = 'http://pisoprint.local';
 
         return [
             'ssid' => config('hardware.wifi_ssid', 'PisoPrint_Kiosk'),

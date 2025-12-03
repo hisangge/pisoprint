@@ -82,7 +82,7 @@ interface Transaction {
     balanceBefore: number;
     balanceAfter: number;
     description: string;
-    sessionId: string;
+    sessionId: string | null;
     esp32Id: string | null;
     coinCount: number | null;
     coinValue: number | null;
@@ -609,11 +609,9 @@ export default function Transactions({
                                                         )}
                                                     </TableCell>
                                                     <TableCell className="font-mono text-xs whitespace-nowrap">
-                                                        {transaction.sessionId.substring(
-                                                            0,
-                                                            8,
-                                                        )}
-                                                        ...
+                                                        {transaction.sessionId
+                                                            ? `${transaction.sessionId.substring(0, 8)}...`
+                                                            : '-'}
                                                     </TableCell>
                                                     <TableCell className="min-w-[120px]">
                                                         {transaction.user ? (

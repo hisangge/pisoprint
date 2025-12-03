@@ -140,7 +140,7 @@ export default function Settings({ settings, availablePrinters }: Props) {
                                                         {availablePrinters.length ===
                                                         0 ? (
                                                             <SelectItem
-                                                                value=""
+                                                                value="_none"
                                                                 disabled
                                                             >
                                                                 No printers

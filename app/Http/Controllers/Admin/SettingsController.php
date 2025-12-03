@@ -24,7 +24,7 @@ class SettingsController extends Controller
                 // Printing Settings
                 'printing' => [
                     'defaultPrinter' => config('printing.default_printer_id'),
-                    'cupsServer' => config('printing.drivers'),
+                    'cupsServer' => config('printing.drivers.cups.ip', 'localhost'),
                     'pricing' => [
                         'bw' => config('printing.prices.black_and_white'),
                         'grayscale' => config('printing.prices.grayscale'),

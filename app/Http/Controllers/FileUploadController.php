@@ -121,9 +121,11 @@ class FileUploadController extends Controller
             $filePath = ltrim($filePath, '\\/');
             $fullPath = $device . $filePath;
         } else {
-            // On Linux, construct path from mount point
-            $mountPoint = config('hardware.usb_mount_point', '/mnt/usb');
-            $fullPath = $mountPoint.'/'.$device.'/'.$filePath;
+            // On Linux, device already contains the full mount path (e.g., "/mnt/usb/sda1")
+            // filePath is the relative path to the file (e.g., "princess.pdf")
+            $device = rtrim($device, '/');
+            $filePath = ltrim($filePath, '/');
+            $fullPath = $device.'/'.$filePath;
         }
 
         \Log::info("USB Upload: Starting copy", [
